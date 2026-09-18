@@ -28,7 +28,7 @@ class SettingsTab {
         root.addView(title);
         root.addView(Ui.vSpace(act, 6));
 
-        TextView about = Ui.text(act, "Bíblia & Hinário - versão " + AppInfo.VERSION, 13, Ui.MUTED, false);
+        TextView about = Ui.text(act, AppInfo.NAME + " - versão " + AppInfo.VERSION, 13, Ui.MUTED, false);
         about.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(about);
         root.addView(Ui.vSpace(act, 18));
