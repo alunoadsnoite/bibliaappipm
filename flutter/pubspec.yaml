@@ -2,7 +2,7 @@ name: biblia_app
 description: "Bíblia & Hinário - leitura da Bíblia, hinário, músicas e boletim da igreja."
 publish_to: 'none'
 
-version: 4.2.1+8
+version: 4.3.0+11
 
 environment:
   sdk: ^3.13.3
@@ -13,6 +13,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.5
   share_plus: ^13.3.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -29,3 +30,4 @@ flutter:
     - assets/hinos.json
     - assets/musicas.json
     - assets/boletim.json
+    - assets/logo_ipm.png

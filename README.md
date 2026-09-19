@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.2.2**
+> Nome do projeto: **BibliaApp** · versão atual: **4.3**
 
 ## Funcionalidades
 
@@ -32,8 +32,14 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 
 ### ⚙️ Configurações
 - Tamanho da letra: **Pequeno**, **Normal**, **Grande** e **Extra grande**.
-- Tema: **Claro**, **Escuro** e **Marrom**.
+- Tema: **Claro**, **Escuro**, **Marrom** e **Verde**.
+- Logomarca IPM e dados de contato (e-mail e WhatsApp).
 - Preferências e destaques preservados entre versões.
+
+## Contato
+
+- **E-mail:** valdenorsa@proton.me
+- **WhatsApp:** +55 (81) 98835-3131
 
 ## Tecnologias
 
@@ -102,7 +108,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.0 | App nativo Android |
 | 4.2 | Rewrite em Flutter (Android + iOS) com a marca **Bíblia IPM** |
 | 4.2.1 | Novo ícone, correções na atualização de tema e tamanho da letra |
-| 4.2.2 | Versão atual |
+| 4.3 | Tema **Verde**, refino do hinário, logomarca IPM e contatos (e-mail e WhatsApp) nas Configurações |
 
 ## Repositório
 

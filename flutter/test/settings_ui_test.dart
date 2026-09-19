@@ -57,6 +57,24 @@ void main() {
     );
   });
 
+  testWidgets('tema Verde aplica a paleta verde e branco',
+      (tester) async {
+    await openConfig(tester);
+
+    expect(find.text('Verde'), findsOneWidget);
+
+    await tester.tap(find.text('Verde'));
+    await tester.pumpAndSettle();
+
+    expect(AppState.i.themeIndex, 3);
+    expect(checkInThemeRow('Verde'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+          (w) => w is Container && w.color == kVerde.bg),
+      findsWidgets,
+    );
+  });
+
   testWidgets('slider de tamanho da letra muda a escala e o rótulo',
       (tester) async {
     await openConfig(tester);

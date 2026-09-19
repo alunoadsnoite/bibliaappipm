@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../common.dart';
 import '../store.dart';
 import '../theme.dart';
+
+const String kContactEmail = 'valdenorsa@proton.me';
+const String kContactWhatsapp = '+55 81 98835-3131';
+const String kContactWhatsappLink = 'https://wa.me/5581988353131';
+
+Future<void> _openEmail() async {
+  await launchUrl(Uri(scheme: 'mailto', path: kContactEmail));
+}
+
+Future<void> _openWhatsapp() async {
+  await launchUrl(Uri.parse(kContactWhatsappLink));
+}
 
 class SettingsTab extends StatelessWidget {
   const SettingsTab({super.key});
@@ -75,11 +88,102 @@ class SettingsTab extends StatelessWidget {
             const SizedBox(height: 8),
             for (var i = 0; i < kThemes.length; i++) _themeRow(context, i),
             const SizedBox(height: 20),
+            _contactSection(context),
+            const SizedBox(height: 20),
             Text(
               'Seus destaques e músicas são mantidos entre as versões.',
               style: TextStyle(color: t.muted, fontSize: 13),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _contactSection(BuildContext context) {
+    final t = appTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: ClipOval(
+            child: Image.asset(
+              'assets/logo_ipm.png',
+              width: 96,
+              height: 96,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('Contato',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(kAppName,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: t.muted, fontSize: 12)),
+        const SizedBox(height: 8),
+        _contactTile(
+          icon: Icons.email,
+          title: kContactEmail,
+          subtitle: 'Enviar e-mail',
+          onTap: _openEmail,
+        ),
+        const SizedBox(height: 8),
+        _contactTile(
+          icon: Icons.chat,
+          title: kContactWhatsapp,
+          subtitle: 'Conversar no WhatsApp',
+          onTap: _openWhatsapp,
+        ),
+      ],
+    );
+  }
+
+  Widget _contactTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final t = appTheme;
+    return Material(
+      color: t.card,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: t.light,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: t.accent, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(color: t.text, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: TextStyle(color: t.muted, fontSize: 12)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: t.muted, size: 20),
+            ],
+          ),
         ),
       ),
     );

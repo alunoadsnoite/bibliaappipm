@@ -65,8 +65,21 @@ const AppTheme kMarrom = AppTheme(
   tabSelected: Color(0xFFBC8A3C),
 );
 
-const List<AppTheme> kThemes = [kClaro, kEscuro, kMarrom];
-const List<String> kThemeNames = ['Claro', 'Escuro', 'Marrom'];
+const AppTheme kVerde = AppTheme(
+  bg: Color(0xFFF6FBF8),
+  card: Color(0xFFFFFFFF),
+  text: Color(0xFF12261B),
+  muted: Color(0xFF5C7B6A),
+  primary: Color(0xFF0D5131),
+  primaryDark: Color(0xFF07321E),
+  accent: Color(0xFF38AF00),
+  accentDark: Color(0xFF2E8B00),
+  light: Color(0xFFE7F4F2),
+  tabSelected: Color(0xFF2C8B6C),
+);
+
+const List<AppTheme> kThemes = [kClaro, kEscuro, kMarrom, kVerde];
+const List<String> kThemeNames = ['Claro', 'Escuro', 'Marrom', 'Verde'];
 
 const List<double> kFontLevels = [0.85, 1.0, 1.15, 1.30];
 const List<String> kFontLevelNames = [
