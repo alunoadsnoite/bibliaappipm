@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../common.dart';
 import '../models.dart';
 import '../store.dart';
+import '../tts.dart';
 
 class _SearchArg {
   final List<Book> books;
@@ -299,39 +300,167 @@ class _BibleTabState extends State<BibleTab> {
     final b = _book!;
     final chapter = _chapter!;
     final verses = b.chapters[chapter];
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 24),
-      itemCount: verses.length,
-      itemBuilder: (context, v) {
-        final ref = '${b.abbr} ${chapter + 1}:${v + 1}';
-        final key = 'v:$ref';
-        return GestureDetector(
-          onLongPress: () => showLineMenu(
-            context,
-            title: ref,
-            text: '$ref  ${verses[v]}',
-            highlightKey: key,
-            onHighlightChanged: (_) => setState(() {}),
-          ),
-          child: Container(
-            color: highlightColor(key),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return ListenableBuilder(
+      listenable:
+          Listenable.merge([TtsService.i.phase, TtsService.i.index]),
+      builder: (context, _) {
+        final readingIndex = TtsService.i.index.value;
+        return Column(
+          children: [
+            _ttsControls(verses.length),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 24),
+                itemCount: verses.length,
+                itemBuilder: (context, v) {
+                  final ref = '${b.abbr} ${chapter + 1}:${v + 1}';
+                  final key = 'v:$ref';
+                  final reading = readingIndex == v;
+                  return GestureDetector(
+                    onLongPress: () => showLineMenu(
+                      context,
+                      title: ref,
+                      text: '$ref  ${verses[v]}',
+                      highlightKey: key,
+                      onHighlightChanged: (_) => setState(() {}),
+                    ),
+                    child: Container(
+                      color: reading
+                          ? t.accent.withValues(alpha: 0.16)
+                          : highlightColor(key),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(ref,
+                                    style: TextStyle(
+                                        color: reading
+                                            ? t.accent
+                                            : t.accentDark,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                Text(verses[v],
+                                    style: TextStyle(
+                                        color: t.text,
+                                        fontSize: 16,
+                                        height: 1.4)),
+                              ],
+                            ),
+                          ),
+                          if (reading)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6, left: 4),
+                              child: Icon(Icons.volume_up,
+                                  color: t.accent, size: 18),
+                            )
+                          else
+                            IconButton(
+                              icon: Icon(Icons.volume_up,
+                                  color: t.muted,
+                                  size: 18),
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => TtsService.i
+                                  .speakOne('$ref. ${verses[v]}'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _ttsControls(int verseCount) {
+    final t = appTheme;
+    return ListenableBuilder(
+      listenable:
+          Listenable.merge([TtsService.i.phase, TtsService.i.index]),
+      builder: (context, _) {
+        final phase = TtsService.i.phase.value;
+        final idx = TtsService.i.index.value;
+        final playing = phase == TtsPhase.playing;
+        final paused = phase == TtsPhase.paused;
+        final chapter = playing || paused;
+
+        String label;
+        if (playing && idx != null) {
+          label = 'Versículo ${idx + 1} de $verseCount';
+        } else if (paused && idx != null) {
+          label = 'Pausado · Versículo ${idx + 1} de $verseCount';
+        } else if (playing) {
+          label = 'Lendo versículo…';
+        } else {
+          label = 'Ouvir o capítulo';
+        }
+
+        return Material(
+          color: t.primaryDark,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
+            child: Row(
               children: [
-                Text(ref,
-                    style: TextStyle(
-                        color: t.accent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-                Text(verses[v],
-                    style: TextStyle(color: t.text, fontSize: 16, height: 1.4)),
+                Icon(playing
+                    ? Icons.graphic_eq
+                    : paused
+                        ? Icons.pause
+                        : Icons.volume_up,
+                    color: Colors.white,
+                    size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(label,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold)),
+                ),
+                if (!chapter || paused)
+                  IconButton(
+                    icon: const Icon(Icons.play_arrow, color: Colors.white),
+                    onPressed: () {
+                      if (paused) {
+                        TtsService.i.resume();
+                      } else {
+                        _playChapter();
+                      }
+                    },
+                  ),
+                if (playing)
+                  IconButton(
+                    icon: const Icon(Icons.pause, color: Colors.white),
+                    onPressed: TtsService.i.pause,
+                  ),
+                if (chapter)
+                  IconButton(
+                    icon: const Icon(Icons.stop, color: Colors.white),
+                    onPressed: TtsService.i.stop,
+                  ),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  void _playChapter() {
+    final verses = _book!.chapters[_chapter!];
+    final queue = [
+      '${_book!.name}, capítulo ${_chapter! + 1}.',
+      for (var v = 0; v < verses.length; v++)
+        'Versículo ${v + 1}. ${verses[v]}',
+    ];
+    TtsService.i.playChapter(queue);
   }
 
   Widget _resultsView() {

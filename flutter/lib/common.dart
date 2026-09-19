@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'store.dart';
 import 'theme.dart';
+import 'tts.dart';
 
 const List<Color> kHighlightColors = [
   Color(0xFFF3D463),
@@ -72,6 +73,14 @@ Future<void> showLineMenu(
                 style: TextStyle(
                     color: t.text, fontSize: 15, fontWeight: FontWeight.bold),
               ),
+            ),
+            ListTile(
+              leading: Icon(Icons.volume_up, color: t.text),
+              title: Text('Ouvir', style: TextStyle(color: t.text)),
+              onTap: () {
+                TtsService.i.speakOne(text);
+                Navigator.pop(ctx);
+              },
             ),
             ListTile(
               leading: Icon(Icons.copy, color: t.text),

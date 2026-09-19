@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.3**
+> Nome do projeto: **BibliaApp** · versão atual: **4.4**
 
 ## Funcionalidades
 
@@ -16,6 +16,9 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - Busca por texto em qualquer versículo (com 3 ou mais letras).
 - **Destaques** em 6 cores por versículo e por linha de hino/música.
 - **Copiar** e **compartilhar** versículos com referência.
+- **Leitura por voz (acessibilidade)** — leia o capítulo inteiro com
+  play/pausa/parar, ou um único versículo pelo botão de som ao lado de cada
+  versículo (funciona também no menu de toque longo).
 
 ### 🎶 Hinário
 - Hinário **Novo Cântico** completo (405 hinos) com busca por título, autor ou letra.
@@ -46,6 +49,8 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Flutter / Dart** (SDK `^3.13.3`)
 - `shared_preferences` — persistência local
 - `share_plus` — compartilhamento de texto
+- `flutter_tts` — leitura por voz (acessibilidade)
+- `url_launcher` — contatos (e-mail e WhatsApp)
 - Código 100% offline — todos os conteúdos são empacotados como assets do app
 
 ## Estrutura do projeto
@@ -109,6 +114,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.2 | Rewrite em Flutter (Android + iOS) com a marca **Bíblia IPM** |
 | 4.2.1 | Novo ícone, correções na atualização de tema e tamanho da letra |
 | 4.3 | Tema **Verde**, refino do hinário, logomarca IPM e contatos (e-mail e WhatsApp) nas Configurações |
+| 4.4 | **Leitura por voz** na Bíblia: capítulo inteiro ou versículo isolado (acessibilidade) |
 
 ## Repositório
 

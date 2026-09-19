@@ -2,7 +2,7 @@ name: biblia_app
 description: "Bíblia & Hinário - leitura da Bíblia, hinário, músicas e boletim da igreja."
 publish_to: 'none'
 
-version: 4.3.0+11
+version: 4.4.0+12
 
 environment:
   sdk: ^3.13.3
@@ -14,6 +14,7 @@ dependencies:
   shared_preferences: ^2.5.5
   share_plus: ^13.3.0
   url_launcher: ^6.3.2
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:
