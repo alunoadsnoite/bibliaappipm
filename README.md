@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.8**
+> Nome do projeto: **BibliaApp** · versão atual: **4.8.1**
 
 ## Funcionalidades
 
@@ -37,7 +37,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 
 ### 📚 Biblioteca
 - **Confissão de Fé de Westminster** (35 capítulos).
-- **Catecismo Maior de Westminster** (193 perguntas, edição IPB).
+- **Catecismo Maior de Westminster** (196 perguntas, texto completo).
 - **Catecismo Menor de Westminster** (107 perguntas).
 - **Credo Apostólico** e **Credo Niceno**.
 - **Os Dez Mandamentos** (Êxodo 20, ARA).
@@ -136,6 +136,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.6 | **150 cânticos** do *Livro de Cânticos PG Micheline* na aba Músicas; testes unitários da leitura por voz (engines de TTS testáveis); ajustes de tema/boletim |
 | 4.7 | Versão **BKJ** (Bíblia King James Fiel 1611) como 5ª tradução da Bíblia; livros agrupados por categorias literárias; novo ícone de música na aba Músicas; correção de indexação da NTLH ("2 Samuel" de 38 para 24 capítulos) |
 | 4.8 | Nova aba **Biblioteca**: Confissão de Fé de Westminster, Catecismo Maior e Menor, Credo Apostólico, Credo Niceno, Os Dez Mandamentos, Os Cinco Pontos do Calvinismo e As 95 Teses de Lutero — com busca e leitura por voz |
+| 4.8.1 | **Catecismo Maior** com o texto completo: restauradas as perguntas 176, 177 e 192, ausentes na edição IPB (de 193 para 196 perguntas) |
 
 ## Repositório
 

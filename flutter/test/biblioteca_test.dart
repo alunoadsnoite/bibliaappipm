@@ -22,7 +22,7 @@ void main() {
     int items(String id) =>
         AppState.i.biblioteca.firstWhere((d) => d.id == id).items.length;
     expect(items('cfw'), 35);
-    expect(items('cm'), 193);
+    expect(items('cm'), 196);
     expect(items('cb'), 107);
     expect(items('dm'), 1);
     expect(items('5p'), 6);
