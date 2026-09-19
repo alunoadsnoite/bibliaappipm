@@ -8,12 +8,12 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 
 ### 📖 Bíblia
 - Leitura completa dos 66 livros, offline, com capítulos e versículos.
-- 5 traduções disponíveis:
+- **5 traduções** disponíveis:
   - **JFAA** — João Ferreira de Almeida Atualizada Livre
   - **ARA** — Almeida Revista e Atualizada
   - **NVI** — Nova Versão Internacional
   - **NTLH** — Nova Tradução na Linguagem de Hoje
-  - **BKJ** — Bíblia King James Fiel 1611
+  - **BKJ** — Bíblia King James Fiel 1611 (nova versão, na 4.7)
 - Livros organizados por grandes grupos literários (Pentateuco, Históricos,
   Poéticos, Sapenciais, Proféticos Maiores/Menores, Evangelhos, Atos, Cartas
   Paulinas, Cartas Gerais e Revelação), dentro de Antigo e Novo Testamento.
@@ -29,7 +29,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - Coros, pontes e prelúdios identificados.
 - **Ouvir o hino completo** por voz (em estrofes, com pausa/continuar/parar).
 
-### ⭐ Músicas
+### 🎵 Músicas
 - **150 cânticos** do *Livro de Cânticos PG Micheline* já inclusos.
 - Adicionar, editar e excluir letras de músicas próprias.
 - Compartilhar e destacar linhas.
@@ -124,7 +124,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.4 | **Leitura por voz** na Bíblia: capítulo inteiro ou versículo isolado (acessibilidade) |
 | 4.5 | **Leitura por voz** do hino inteiro (Hinário) e da música inteira (Músicas) |
 | 4.6 | **150 cânticos** do *Livro de Cânticos PG Micheline* na aba Músicas; testes unitários da leitura por voz (engines de TTS testáveis); ajustes de tema/boletim |
-| 4.7 | Versão **BKJ** (Bíblia King James Fiel 1611) na Bíblia; livros agrupados por categorias literárias; novo ícone da aba Músicas; correções de indexação da NTLH ("2 Samuel" com 38 capítulos passou a 24) |
+| 4.7 | Versão **BKJ** (Bíblia King James Fiel 1611) como 5ª tradução da Bíblia; livros agrupados por categorias literárias; novo ícone de música na aba Músicas; correção de indexação da NTLH ("2 Samuel" de 38 para 24 capítulos) |
 
 ## Repositório
 
