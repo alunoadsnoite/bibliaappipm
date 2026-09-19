@@ -15,30 +15,51 @@ Future<void> main() async {
   runApp(const BibliaApp());
 }
 
-class BibliaApp extends StatelessWidget {
+class BibliaApp extends StatefulWidget {
   const BibliaApp({super.key});
+
+  @override
+  State<BibliaApp> createState() => _BibliaAppState();
+}
+
+class _BibliaAppState extends State<BibliaApp> {
+  VoidCallback? _prevBrightnessCallback;
+
+  @override
+  void initState() {
+    super.initState();
+    final dispatcher = WidgetsBinding.instance.platformDispatcher;
+    _prevBrightnessCallback = dispatcher.onPlatformBrightnessChanged;
+    dispatcher.onPlatformBrightnessChanged = () {
+      if (mounted) setState(() {});
+    };
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
+        _prevBrightnessCallback;
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: AppState.i,
       builder: (context, _) {
-        final t = kThemes[AppState.i.themeIndex];
+        final t = themeForIndex(AppState.i.themeIndex);
+        final brightness = resolveBrightness(AppState.i.themeIndex);
         return MaterialApp(
           title: kAppName,
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            brightness: AppState.i.themeIndex == 1
-                ? Brightness.dark
-                : Brightness.light,
+            brightness: brightness,
             scaffoldBackgroundColor: t.bg,
             colorScheme: ColorScheme.fromSeed(
               seedColor: t.primary,
               primary: t.primary,
               secondary: t.accent,
-              brightness: AppState.i.themeIndex == 1
-                  ? Brightness.dark
-                  : Brightness.light,
+              brightness: brightness,
             ),
             textSelectionTheme:
                 TextSelectionThemeData(cursorColor: t.accent),

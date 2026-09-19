@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'store.dart';
-import 'theme.dart';
+import 'common.dart';
 import 'tts.dart';
 
 /// Barra de controle da leitura por voz, reutilizada na Bíblia,
@@ -29,7 +28,7 @@ class TtsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = kThemes[AppState.i.themeIndex];
+    final t = appTheme;
     return ListenableBuilder(
       listenable: Listenable.merge([TtsService.i.phase, TtsService.i.index]),
       builder: (context, _) {

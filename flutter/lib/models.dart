@@ -138,6 +138,40 @@ String parseBoletimJson(List<Birthday> birthdays, List<ChurchEvent> events) =>
       'eventos': events.map((e) => e.toJson()).toList(),
     });
 
+/// Referência visitada recentemente, usada para navegação rápida.
+class RecentRef {
+  final String version;
+  final int book;
+  final int chapter;
+
+  RecentRef(this.version, this.book, this.chapter);
+
+  Map<String, dynamic> toJson() => {
+        'v': version,
+        'b': book,
+        'c': chapter,
+      };
+
+  factory RecentRef.fromJson(Map<String, dynamic> o) => RecentRef(
+        (o['v'] ?? '') as String,
+        o['b'] as int,
+        o['c'] as int,
+      );
+}
+
+/// Posição de leitura de uma versão (último livro/capítulo abertos).
+class Position {
+  final int book;
+  final int chapter;
+
+  Position(this.book, this.chapter);
+
+  Map<String, dynamic> toJson() => {'b': book, 'c': chapter};
+
+  factory Position.fromJson(Map<String, dynamic> o) =>
+      Position(o['b'] as int, o['c'] as int);
+}
+
 class BibliotecaText {
   final String id;
   final String title;

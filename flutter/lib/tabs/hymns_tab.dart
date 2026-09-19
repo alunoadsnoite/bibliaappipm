@@ -217,7 +217,9 @@ class _HymnsTabState extends State<HymnsTab> {
         title: text,
         text: text,
         highlightKey: key,
+        note: AppState.i.getNote(key) ?? '',
         onHighlightChanged: (_) => setState(() {}),
+        onNoteChanged: (_) => setState(() {}),
       ),
       child: Container(
         width: double.infinity,

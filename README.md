@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.8.1**
+> Nome do projeto: **BibliaApp** · versão atual: **4.9.0**
 
 ## Funcionalidades
 
@@ -17,12 +17,22 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - Livros organizados por grandes grupos literários (Pentateuco, Históricos,
   Poéticos, Sapenciais, Proféticos Maiores/Menores, Evangelhos, Atos, Cartas
   Paulinas, Cartas Gerais e Revelação), dentro de Antigo e Novo Testamento.
-- Busca por texto em qualquer versículo (com 3 ou mais letras).
+- **Busca por texto** em qualquer versículo (com 3 ou mais letras) e **busca
+  por referência** (ex.: `Jo 3:16`, `Salmos 23`, `1co13`) — resultados
+  paginados com contagem.
+- **Versículo do dia**: rotação determinística por data, 100% offline.
+- **Plano de leitura anual**: progresso de capítulos lidos, meta diária
+  configurável e contagem por dia.
+- **Continuar lendo**: retoma a última posição de leitura de cada tradução.
+- **Histórico recente**: últimas referências visitadas, com navegação rápida.
+- **Modo leitura (foco)**: leitura em tela cheia, sem barras de navegação.
 - **Destaques** em 6 cores por versículo e por linha de hino/música.
+- **Notas por versículo** (e por linha de hino/música/documentos), exibidas ao
+  lado do texto.
+- **Comparar traduções** de um mesmo versículo, lado a lado.
 - **Copiar** e **compartilhar** versículos com referência.
 - **Leitura por voz (acessibilidade)** — leia o capítulo inteiro com
-  play/pausa/parar, ou um único versículo pelo botão de som ao lado de cada
-  versículo (funciona também no menu de toque longo).
+  play/pausa/parar, ou um único versículo pelo menu de toque longo.
 
 ### 🎶 Hinário
 - Hinário **Novo Cântico** completo (405 hinos) com busca por título, autor ou letra.
@@ -52,8 +62,14 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 
 ### ⚙️ Configurações
 - Tamanho da letra: **Pequeno**, **Normal**, **Grande** e **Extra grande**.
-- Tema: **Claro**, **Escuro**, **Marrom** e **Verde**.
-- Logomarca IPM e dados de contato (e-mail e WhatsApp).
+- Tema: **Claro**, **Escuro**, **Marrom**, **Verde** e **Sistema** (segue o
+  modo claro/escuro do aparelho).
+- **Plano de leitura**: ativar/desativar e definir a meta diária.
+- **Backup**: exportar e importar todos os dados (destaques, notas, músicas,
+  boletim e progresso) em JSON.
+- Logomarca IPM, **Instagram** e **YouTube** da igreja.
+- **Dízimos e ofertas**: chave **Pix** da igreja para copiar/compartilhar, e
+  contatos por e-mail e WhatsApp.
 - Preferências e destaques preservados entre versões.
 
 ## Contato
@@ -137,6 +153,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.7 | Versão **BKJ** (Bíblia King James Fiel 1611) como 5ª tradução da Bíblia; livros agrupados por categorias literárias; novo ícone de música na aba Músicas; correção de indexação da NTLH ("2 Samuel" de 38 para 24 capítulos) |
 | 4.8 | Nova aba **Biblioteca**: Confissão de Fé de Westminster, Catecismo Maior e Menor, Credo Apostólico, Credo Niceno, Os Dez Mandamentos, Os Cinco Pontos do Calvinismo e As 95 Teses de Lutero — com busca e leitura por voz |
 | 4.8.1 | **Catecismo Maior** com o texto completo: restauradas as perguntas 176, 177 e 192, ausentes na edição IPB (de 193 para 196 perguntas) |
+| 4.9 | **Versículo do dia**, **plano de leitura anual** com meta diária, **continuar lendo** e **histórico recente**; **notas** por versículo/linha; **comparar traduções** lado a lado; **busca por referência** e resultados paginados; **modo leitura** em tela cheia; tema **Sistema**; **backup** (exportar/importar); traduções carregadas **sob demanda**; redes sociais (**Instagram/YouTube**) e **dízimos e ofertas (chave Pix)** nas Configurações; ícone de áudio individual removido do texto (leitura por voz segue via TTS) |
 
 ## Repositório
 

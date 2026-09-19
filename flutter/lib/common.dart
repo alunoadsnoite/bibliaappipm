@@ -24,7 +24,7 @@ const List<String> kHighlightNames = [
   'Rosa',
 ];
 
-AppTheme get appTheme => kThemes[AppState.i.themeIndex];
+AppTheme get appTheme => themeForIndex(AppState.i.themeIndex);
 
 Color highlightColor(String key) {
   final i = AppState.i.getHighlight(key);
@@ -40,7 +40,8 @@ Future<void> shareText(String text) async {
   await SharePlus.instance.share(ShareParams(text: text));
 }
 
-/// Menu de toque longo: copiar, compartilhar e cores de destaque.
+/// Menu de toque longo: ouvir, comparar, copiar, compartilhar, anotar e
+/// cores de destaque.
 Future<void> showLineMenu(
   BuildContext context, {
   required String title,
@@ -48,6 +49,9 @@ Future<void> showLineMenu(
   required String highlightKey,
   ValueChanged<int>? onHighlightChanged,
   bool clearOption = true,
+  String? note,
+  ValueChanged<String>? onNoteChanged,
+  VoidCallback? onCompare,
 }) async {
   final t = appTheme;
   final current = AppState.i.getHighlight(highlightKey);
@@ -74,12 +78,33 @@ Future<void> showLineMenu(
                     color: t.text, fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
+            if (onCompare != null)
+              ListTile(
+                leading: Icon(Icons.compare_arrows, color: t.text),
+                title:
+                    Text('Comparar traduções', style: TextStyle(color: t.text)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onCompare();
+                },
+              ),
             ListTile(
               leading: Icon(Icons.volume_up, color: t.text),
               title: Text('Ouvir', style: TextStyle(color: t.text)),
               onTap: () {
                 TtsService.i.speakOne(text);
                 Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.note_add, color: t.text),
+              title: Text(note == null || note.isEmpty
+                  ? 'Anotar'
+                  : 'Nota: $note'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final edited = await _editNote(context, highlightKey, note ?? '');
+                if (edited != null) onNoteChanged?.call(edited);
               },
             ),
             ListTile(
@@ -159,4 +184,44 @@ Future<void> showLineMenu(
       );
     },
   );
+}
+
+/// Abre o diálogo de anotação de um versículo/linha. Retorna o novo texto
+/// salvo, ou `null` se cancelado.
+Future<String?> _editNote(
+  BuildContext context,
+  String key,
+  String initial,
+) async {
+  final t = appTheme;
+  final ctrl = TextEditingController(text: initial);
+  final saved = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: t.card,
+      title: Text('Anotação', style: TextStyle(color: t.text)),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        maxLines: 6,
+        style: TextStyle(color: t.text),
+        decoration: const InputDecoration(
+          hintText: 'Escreva sua nota sobre este versículo.',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, null),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+          child: const Text('Salvar'),
+        ),
+      ],
+    ),
+  );
+  if (saved == null) return null;
+  await AppState.i.setNote(key, saved);
+  return saved;
 }

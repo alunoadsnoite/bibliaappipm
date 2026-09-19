@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -8,6 +10,12 @@ import '../theme.dart';
 const String kContactEmail = 'valdenorsa@proton.me';
 const String kContactWhatsapp = '+55 81 98835-3131';
 const String kContactWhatsappLink = 'https://wa.me/5581988353131';
+const String kInstagramLink = 'https://www.instagram.com/ipmadalena/';
+const String kInstagramHandle = '@ipmadalena';
+const String kYoutubeLink = 'https://www.youtube.com/@IPMadalena';
+const String kYoutubeHandle = 'IP Madalena';
+const String kPixKey = '09.829.847/0001-58';
+const String kPixBeneficiario = 'IP Madalena';
 
 Future<void> _openEmail() async {
   await launchUrl(Uri(scheme: 'mailto', path: kContactEmail));
@@ -86,8 +94,13 @@ class SettingsTab extends StatelessWidget {
                 style: TextStyle(
                     color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            for (var i = 0; i < kThemes.length; i++) _themeRow(context, i),
+            for (var i = 0; i < kThemeNames.length; i++) _themeRow(context, i),
             const SizedBox(height: 20),
+            _planSection(context),
+            const SizedBox(height: 20),
+            _backupSection(context),
+            const SizedBox(height: 20),
+            _pixSection(context),
             _contactSection(context),
             const SizedBox(height: 20),
             Text(
@@ -97,6 +110,114 @@ class SettingsTab extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _openInstagram() async {
+    await launchUrl(Uri.parse(kInstagramLink));
+  }
+
+  Future<void> _openYoutube() async {
+    await launchUrl(Uri.parse(kYoutubeLink));
+  }
+
+  Widget _pixSection(BuildContext context) {
+    final t = appTheme;
+    final messenger = ScaffoldMessenger.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Dízimos e ofertas',
+            style: TextStyle(
+                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Material(
+          color: t.card,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00A550),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.qr_code_2,
+                          color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Contribua pela chave Pix (CNPJ), com sua oferta e '
+                        'dízimo, e ajude a obra do Senhor.',
+                        style: TextStyle(color: t.muted, fontSize: 13, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: t.light,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    kPixKey,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: t.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Beneficiário: $kPixBeneficiario',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: t.muted, fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () async {
+                        await copyText(kPixKey);
+                        messenger.showSnackBar(SnackBar(
+                          content: Text('Chave Pix copiada.',
+                              style: TextStyle(color: t.text)),
+                          backgroundColor: t.card,
+                        ));
+                      },
+                      icon: const Icon(Icons.copy, size: 18),
+                      label: const Text('Copiar chave'),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () => shareText(
+                          'Dízimos e ofertas — $kPixBeneficiario\n'
+                          'Chave Pix (CNPJ): $kPixKey'),
+                      icon: const Icon(Icons.share, size: 18),
+                      label: const Text('Compartilhar'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
@@ -142,6 +263,20 @@ class SettingsTab extends StatelessWidget {
           title: kContactWhatsapp,
           subtitle: 'Conversar no WhatsApp',
           onTap: _openWhatsapp,
+        ),
+        const SizedBox(height: 8),
+        _contactTile(
+          icon: Icons.camera_alt,
+          title: kInstagramHandle,
+          subtitle: 'Seguir no Instagram',
+          onTap: _openInstagram,
+        ),
+        const SizedBox(height: 8),
+        _contactTile(
+          icon: Icons.play_circle_fill,
+          title: kYoutubeHandle,
+          subtitle: 'Assistir no YouTube',
+          onTap: _openYoutube,
         ),
       ],
     );
@@ -197,7 +332,8 @@ class SettingsTab extends StatelessWidget {
   Widget _themeRow(BuildContext context, int index) {
     final t = appTheme;
     final selected = AppState.i.themeIndex == index;
-    final swatch = kThemes[index];
+    final swatch = themeForIndex(index);
+    final isSystem = index == kSystemThemeIndex;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -217,9 +353,17 @@ class SettingsTab extends StatelessWidget {
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: swatch.primary,
+                    color: isSystem
+                        ? resolveBrightness(index) == Brightness.dark
+                            ? kEscuro.primary
+                            : kClaro.primary
+                        : swatch.primary,
                     shape: BoxShape.circle,
                   ),
+                  child: isSystem
+                      ? const Icon(Icons.brightness_auto,
+                          size: 12, color: Colors.white)
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -234,5 +378,188 @@ class SettingsTab extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _planSection(BuildContext context) {
+    final t = appTheme;
+    final state = AppState.i;
+    final enabled = state.planEnabled;
+    final goal = state.dailyGoal;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Plano de leitura',
+            style: TextStyle(
+                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Material(
+          color: t.card,
+          borderRadius: BorderRadius.circular(8),
+          child: Column(
+            children: [
+              SwitchListTile(
+                value: enabled,
+                activeTrackColor: t.accent,
+                title: Text('Plano anual',
+                    style: TextStyle(color: t.text, fontSize: 15)),
+                subtitle: Text(
+                  'Mostra o progresso da Bíblia e a meta do dia na aba Bíblia.',
+                  style: TextStyle(color: t.muted, fontSize: 12),
+                ),
+                onChanged: (v) => state.setPlanEnabled(v),
+              ),
+              if (enabled)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Meta diária: $goal capítulo${goal == 1 ? '' : 's'}',
+                          style: TextStyle(color: t.text, fontSize: 14)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline),
+                            color: t.accent,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: goal > 1
+                                ? () => state.setDailyGoal(goal - 1)
+                                : null,
+                          ),
+                          Expanded(
+                            child: Slider(
+                              value: goal.toDouble(),
+                              min: 1,
+                              max: 10,
+                              divisions: 9,
+                              activeColor: t.accent,
+                              label: '$goal',
+                              onChanged: (v) =>
+                                  state.setDailyGoal(v.round()),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline),
+                            color: t.accent,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: goal < 10
+                                ? () => state.setDailyGoal(goal + 1)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _backupSection(BuildContext context) {
+    final t = appTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Backup',
+            style: TextStyle(
+                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        _contactTile(
+          icon: Icons.system_update_alt,
+          title: 'Exportar dados',
+          subtitle: 'Destaques, notas, músicas, boletim e progresso',
+          onTap: () => _exportData(context),
+        ),
+        const SizedBox(height: 8),
+        _contactTile(
+          icon: Icons.settings_backup_restore,
+          title: 'Importar dados',
+          subtitle: 'Restaura um backup colado abaixo',
+          onTap: () => _importData(context),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _exportData(BuildContext context) async {
+    final t = appTheme;
+    final json = AppState.i.buildExportJson();
+    await copyText(json);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+        'Backup copiado para a área de transferência. Envie por e-mail/'
+        'WhatsApp ou salve num arquivo.',
+        style: TextStyle(color: t.text),
+      ),
+      backgroundColor: t.card,
+    ));
+    shareText(json);
+  }
+
+  Future<void> _importData(BuildContext context) async {
+    final t = appTheme;
+    final ctrl = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: t.card,
+        title: Text('Importar dados', style: TextStyle(color: t.text)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Cole abaixo o backup (JSON) copiado pela opção "Exportar dados".',
+              style: TextStyle(color: t.muted, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              maxLines: 8,
+              style: TextStyle(color: t.text),
+              decoration: const InputDecoration(hintText: '{ "export": 1, ... }'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Restaurar')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final text = ctrl.text.trim();
+    if (text.isEmpty) return;
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is! Map || decoded['export'] != 1) {
+        messenger.showSnackBar(SnackBar(
+          content: Text('Backup inválido.', style: TextStyle(color: t.text)),
+          backgroundColor: t.card,
+        ));
+        return;
+      }
+      await AppState.i.importFromJson(text);
+      messenger.showSnackBar(SnackBar(
+        content:
+            Text('Dados restaurados com sucesso.', style: TextStyle(color: t.text)),
+        backgroundColor: t.card,
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Não foi possível ler o backup.',
+            style: TextStyle(color: t.text)),
+        backgroundColor: t.card,
+      ));
+    }
   }
 }

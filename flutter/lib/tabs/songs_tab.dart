@@ -190,7 +190,9 @@ class _SongsTabState extends State<SongsTab> {
         title: text,
         text: text,
         highlightKey: key,
+        note: AppState.i.getNote(key) ?? '',
         onHighlightChanged: (_) => setState(() {}),
+        onNoteChanged: (_) => setState(() {}),
       ),
       child: Container(
         width: double.infinity,

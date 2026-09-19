@@ -79,7 +79,40 @@ const AppTheme kVerde = AppTheme(
 );
 
 const List<AppTheme> kThemes = [kClaro, kEscuro, kMarrom, kVerde];
-const List<String> kThemeNames = ['Claro', 'Escuro', 'Marrom', 'Verde'];
+
+/// Índice do tema "Sistema", resolvido dinamicamente conforme o brilho do
+/// sistema operacional ([resolveThemeIndex]/[resolveBrightness]).
+const int kSystemThemeIndex = 4;
+
+const List<String> kThemeNames = [
+  'Claro',
+  'Escuro',
+  'Marrom',
+  'Verde',
+  'Sistema',
+];
+
+int _platformThemeIndex() => WidgetsBinding.instance.platformDispatcher
+            .platformBrightness ==
+        Brightness.dark
+    ? 1
+    : 0;
+
+/// Resolve um índice de tema (inclusive o "Sistema") para o índice concreto
+/// da paleta em [kThemes].
+int resolveThemeIndex(int index) =>
+    index == kSystemThemeIndex ? _platformThemeIndex() : index;
+
+/// Resolve o brilho (claro/escuro) de um índice de tema.
+Brightness resolveBrightness(int index) {
+  if (index == kSystemThemeIndex) {
+    return WidgetsBinding.instance.platformDispatcher.platformBrightness;
+  }
+  return index == 1 ? Brightness.dark : Brightness.light;
+}
+
+/// Paleta efetiva para um índice de tema (inclusive o "Sistema").
+AppTheme themeForIndex(int index) => kThemes[resolveThemeIndex(index)];
 
 const List<double> kFontLevels = [0.85, 1.0, 1.15, 1.30];
 const List<String> kFontLevelNames = [

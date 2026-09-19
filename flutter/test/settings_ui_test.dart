@@ -82,7 +82,7 @@ void main() {
     expect(AppState.i.fontScale, 1.0);
     expect(currentLevelLabel('Normal'), findsOneWidget);
 
-    await tester.drag(find.byType(Slider), const Offset(180, 0));
+    await tester.drag(find.byType(Slider).first, const Offset(180, 0));
     await tester.pumpAndSettle();
 
     final scale = AppState.i.fontScale;

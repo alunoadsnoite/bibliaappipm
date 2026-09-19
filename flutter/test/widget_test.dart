@@ -19,7 +19,9 @@ void main() {
   });
 
   test('temas e níveis de fonte definidos', () {
-    expect(kThemes.length, kThemeNames.length);
+    expect(kThemes.length, 4);
+    expect(kThemeNames.length, kThemes.length + 1);
+    expect(kSystemThemeIndex, 4);
     expect(kFontLevels.length, kFontLevelNames.length);
     expect(fontLevelIndex(1.0), 1);
   });
