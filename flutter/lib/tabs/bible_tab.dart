@@ -15,6 +15,32 @@ class _SearchArg {
   _SearchArg(this.books, this.query);
 }
 
+/// Agrupamentos dos 66 livros por índices canônicos, independentes da
+/// grafia da abreviação em cada versão.
+class _Group {
+  final String label;
+  final List<int> indices;
+  const _Group(this.label, this.indices);
+}
+
+const List<_Group> _kGroups = [
+  _Group('Pentateuco', [0, 1, 2, 3, 4]),
+  _Group('Livros Históricos', [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+  _Group('Poéticos', [17, 18, 21]),
+  _Group('Sapenciais', [19, 20]),
+  _Group('Proféticos Maiores', [22, 23, 24, 25, 26]),
+  _Group('Proféticos Menores', [
+    27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
+  ]),
+  _Group('Evangelhos', [39, 40, 41, 42]),
+  _Group('Atos', [43]),
+  _Group('Cartas Paulinas', [
+    44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+  ]),
+  _Group('Cartas Gerais', [58, 59, 60, 61, 62, 63, 64]),
+  _Group('Revelação', [65]),
+];
+
 List<List<int>> _searchVerses(_SearchArg arg) {
   final res = <List<int>>[];
   final lower = arg.query.toLowerCase();
@@ -205,15 +231,26 @@ class _BibleTabState extends State<BibleTab> {
 
   Widget _booksView() {
     final bible = AppState.i.bible;
+    final children = <Widget>[];
+    String? lastTestament;
+    for (final g in _kGroups) {
+      final testamento =
+          g.indices.first >= 39 ? 'NOVO TESTAMENTO' : 'ANTIGO TESTAMENTO';
+      if (testamento != lastTestament) {
+        children.add(_section(testamento));
+        lastTestament = testamento;
+      }
+      final items = <Widget>[];
+      for (final idx in g.indices) {
+        if (idx < bible.length) items.add(_bookItem(bible[idx], idx));
+      }
+      if (items.isEmpty) continue;
+      children.add(_groupSection(g.label));
+      children.addAll(items);
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-      children: [
-        _section('ANTIGO TESTAMENTO'),
-        for (var i = 0; i < 39 && i < bible.length; i++)
-          _bookItem(bible[i], i),
-        _section('NOVO TESTAMENTO'),
-        for (var i = 39; i < bible.length; i++) _bookItem(bible[i], i),
-      ],
+      children: children,
     );
   }
 
@@ -224,6 +261,16 @@ class _BibleTabState extends State<BibleTab> {
       child: Text(label,
           style: TextStyle(
               color: t.primary, fontSize: 13, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _groupSection(String label) {
+    final t = appTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 10, 4, 2),
+      child: Text(label,
+          style: TextStyle(
+              color: t.accentDark, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
 

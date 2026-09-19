@@ -99,7 +99,7 @@ class _HomeShellState extends State<HomeShell> {
               BottomNavigationBarItem(
                   icon: Icon(Icons.library_music), label: 'Hinário'),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.star), label: 'Músicas'),
+                  icon: Icon(Icons.music_note), label: 'Músicas'),
               BottomNavigationBarItem(
                   icon: Icon(Icons.calendar_month), label: 'Boletim'),
               BottomNavigationBarItem(

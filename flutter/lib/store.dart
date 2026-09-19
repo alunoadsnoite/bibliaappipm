@@ -7,19 +7,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'theme.dart';
 
-const List<String> kVersionOrder = ['ara', 'nvi', 'ntlh', 'jfaal'];
+const List<String> kVersionOrder = ['ara', 'nvi', 'ntlh', 'jfaal', 'bkj'];
 const List<String> kVersionNames = [
   'Almeida Revista e Atualizada',
   'Nova Versão Internacional',
   'Nova Tradução na Linguagem de Hoje',
   'João Ferreira de Almeida Atualizada Livre',
+  'Bíblia King James Fiel 1611',
 ];
-const List<String> kVersionAbbrs = ['ARA', 'NVI', 'NTLH', 'JFAA'];
+const List<String> kVersionAbbrs = ['ARA', 'NVI', 'NTLH', 'JFAA', 'BKJ'];
 
 const String kHighlightColors = 'highlights';
 
 const String kAppName = 'Bíblia IPM';
-const String kAppVersion = '4.6';
+const String kAppVersion = '4.7';
 
 const MethodChannel _migrationChannel =
     MethodChannel('br.com.valdenor.bibliaapp/migration');
@@ -57,6 +58,7 @@ class AppState extends ChangeNotifier {
     bibles['ara'] = await _loadBible('assets/biblia_ara.json');
     bibles['nvi'] = await _loadBible('assets/biblia_nvi.json');
     bibles['ntlh'] = await _loadBible('assets/biblia_ntlh.json');
+    bibles['bkj'] = await _loadBible('assets/biblia_bkj.json');
     bible = bibles[version] ?? bibles['jfaal']!;
 
     final hymnJson = jsonDecode(await rootBundle.loadString('assets/hinos.json'))

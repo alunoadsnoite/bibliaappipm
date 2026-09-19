@@ -2,17 +2,21 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.6**
+> Nome do projeto: **BibliaApp** · versão atual: **4.7**
 
 ## Funcionalidades
 
 ### 📖 Bíblia
 - Leitura completa dos 66 livros, offline, com capítulos e versículos.
-- 4 traduções disponíveis:
+- 5 traduções disponíveis:
   - **JFAA** — João Ferreira de Almeida Atualizada Livre
   - **ARA** — Almeida Revista e Atualizada
   - **NVI** — Nova Versão Internacional
   - **NTLH** — Nova Tradução na Linguagem de Hoje
+  - **BKJ** — Bíblia King James Fiel 1611
+- Livros organizados por grandes grupos literários (Pentateuco, Históricos,
+  Poéticos, Sapenciais, Proféticos Maiores/Menores, Evangelhos, Atos, Cartas
+  Paulinas, Cartas Gerais e Revelação), dentro de Antigo e Novo Testamento.
 - Busca por texto em qualquer versículo (com 3 ou mais letras).
 - **Destaques** em 6 cores por versículo e por linha de hino/música.
 - **Copiar** e **compartilhar** versículos com referência.
@@ -68,7 +72,7 @@ BibliaApp/
 │   │   ├── theme.dart # Temas e níveis de fonte
 │   │   ├── common.dart # Destaques, copiar e compartilhar
 │   │   └── tabs/      # Abas: Bíblia, Hinário, Músicas, Boletim, Config
-│   ├── assets/        # Bíblias (4 traduções), hinos, músicas e boletim
+│   ├── assets/        # Bíblias (5 traduções), hinos, músicas e boletim
 │   ├── android/       # Projeto Android
 │   ├── ios/           # Projeto iOS
 │   └── test/          # Testes unitários e de widget
@@ -120,6 +124,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.4 | **Leitura por voz** na Bíblia: capítulo inteiro ou versículo isolado (acessibilidade) |
 | 4.5 | **Leitura por voz** do hino inteiro (Hinário) e da música inteira (Músicas) |
 | 4.6 | **150 cânticos** do *Livro de Cânticos PG Micheline* na aba Músicas; testes unitários da leitura por voz (engines de TTS testáveis); ajustes de tema/boletim |
+| 4.7 | Versão **BKJ** (Bíblia King James Fiel 1611) na Bíblia; livros agrupados por categorias literárias; novo ícone da aba Músicas; correções de indexação da NTLH ("2 Samuel" com 38 capítulos passou a 24) |
 
 ## Repositório
 
