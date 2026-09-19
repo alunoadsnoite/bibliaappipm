@@ -106,12 +106,17 @@ class SettingsTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Center(
-          child: ClipOval(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: t.card,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Image.asset(
               'assets/logo_ipm.png',
-              width: 96,
-              height: 96,
-              fit: BoxFit.cover,
+              width: 220,
+              height: 140,
+              fit: BoxFit.contain,
             ),
           ),
         ),
