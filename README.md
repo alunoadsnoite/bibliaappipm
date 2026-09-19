@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.5**
+> Nome do projeto: **BibliaApp** · versão atual: **4.6**
 
 ## Funcionalidades
 
@@ -26,6 +26,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Ouvir o hino completo** por voz (em estrofes, com pausa/continuar/parar).
 
 ### ⭐ Músicas
+- **150 cânticos** do *Livro de Cânticos PG Micheline* já inclusos.
 - Adicionar, editar e excluir letras de músicas próprias.
 - Compartilhar e destacar linhas.
 - **Ouvir a música completa** por voz (em estrofes, com pausa/continuar/parar).
@@ -118,6 +119,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.3 | Tema **Verde**, refino do hinário, logomarca IPM e contatos (e-mail e WhatsApp) nas Configurações |
 | 4.4 | **Leitura por voz** na Bíblia: capítulo inteiro ou versículo isolado (acessibilidade) |
 | 4.5 | **Leitura por voz** do hino inteiro (Hinário) e da música inteira (Músicas) |
+| 4.6 | **150 cânticos** do *Livro de Cânticos PG Micheline* na aba Músicas; testes unitários da leitura por voz (engines de TTS testáveis); ajustes de tema/boletim |
 
 ## Repositório
 

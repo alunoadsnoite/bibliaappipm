@@ -19,9 +19,10 @@ local.properties
 android/IML.toml
 
 # Keystore files
-# Uncomment the following if keeping sync filesprivate on version control.
 #*.jks
 #*.keystore
+# Flutter signing config (contém credenciais reais se presente)
+key.properties
 
 # Mac
 .DS_Store

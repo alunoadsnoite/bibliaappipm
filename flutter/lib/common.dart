@@ -117,7 +117,7 @@ Future<void> showLineMenu(
                       onTap: () async {
                         await AppState.i.setHighlight(highlightKey, i);
                         onHighlightChanged?.call(i);
-                        if (ctx.mounted) Navigator.pop(ctx);
+                        Navigator.pop(ctx);
                       },
                       child: Container(
                         width: 40,
@@ -137,7 +137,7 @@ Future<void> showLineMenu(
                       onTap: () async {
                         await AppState.i.setHighlight(highlightKey, -1);
                         onHighlightChanged?.call(-1);
-                        if (ctx.mounted) Navigator.pop(ctx);
+                        Navigator.pop(ctx);
                       },
                       child: Container(
                         width: 40,

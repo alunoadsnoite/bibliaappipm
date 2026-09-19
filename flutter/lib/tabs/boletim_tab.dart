@@ -19,9 +19,11 @@ class _BoletimTabState extends State<BoletimTab> {
 
   List<Birthday> get _today {
     final now = DateTime.now();
-    return AppState.i.birthdays
+    final list = AppState.i.birthdays
         .where((b) => b.day == now.day && b.month == now.month)
-        .toList();
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return list;
   }
 
   List<ChurchEvent> get _upcoming {

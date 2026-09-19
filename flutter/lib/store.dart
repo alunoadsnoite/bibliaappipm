@@ -19,7 +19,7 @@ const List<String> kVersionAbbrs = ['ARA', 'NVI', 'NTLH', 'JFAA'];
 const String kHighlightColors = 'highlights';
 
 const String kAppName = 'Bíblia IPM';
-const String kAppVersion = '4.5';
+const String kAppVersion = '4.6';
 
 const MethodChannel _migrationChannel =
     MethodChannel('br.com.valdenor.bibliaapp/migration');
@@ -49,6 +49,8 @@ class AppState extends ChangeNotifier {
         ((prefs.getBool('night') ?? false) ? 1 : 0);
     if (themeIndex < 0 || themeIndex >= kThemes.length) themeIndex = 0;
     fontScale = prefs.getDouble('font_scale') ?? 1.0;
+    if (fontScale < 0.5) fontScale = 0.5;
+    if (fontScale > 1.5) fontScale = 1.5;
     version = prefs.getString('biblia_version') ?? 'ara';
 
     bibles['jfaal'] = await _loadBible('assets/biblia.json');
