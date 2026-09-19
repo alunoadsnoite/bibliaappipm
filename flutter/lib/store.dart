@@ -19,7 +19,7 @@ const List<String> kVersionAbbrs = ['ARA', 'NVI', 'NTLH', 'JFAA'];
 const String kHighlightColors = 'highlights';
 
 const String kAppName = 'Bíblia IPM';
-const String kAppVersion = '4.4';
+const String kAppVersion = '4.5';
 
 const MethodChannel _migrationChannel =
     MethodChannel('br.com.valdenor.bibliaapp/migration');

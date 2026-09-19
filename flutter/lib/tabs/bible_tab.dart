@@ -7,6 +7,7 @@ import '../common.dart';
 import '../models.dart';
 import '../store.dart';
 import '../tts.dart';
+import '../tts_bar.dart';
 
 class _SearchArg {
   final List<Book> books;
@@ -69,6 +70,7 @@ class _BibleTabState extends State<BibleTab> {
   }
 
   void _back() {
+    if (_chapter != null || _results != null) TtsService.i.stop();
     setState(() {
       _search.clear();
       if (_results != null) {
@@ -307,7 +309,12 @@ class _BibleTabState extends State<BibleTab> {
         final readingIndex = TtsService.i.index.value;
         return Column(
           children: [
-            _ttsControls(verses.length),
+            TtsBar(
+              positionLabel: 'Versículo',
+              playLabel: 'Ouvir o capítulo',
+              itemCount: verses.length,
+              onPlay: _playChapter,
+            ),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(4, 4, 4, 24),
@@ -375,79 +382,6 @@ class _BibleTabState extends State<BibleTab> {
               ),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  Widget _ttsControls(int verseCount) {
-    final t = appTheme;
-    return ListenableBuilder(
-      listenable:
-          Listenable.merge([TtsService.i.phase, TtsService.i.index]),
-      builder: (context, _) {
-        final phase = TtsService.i.phase.value;
-        final idx = TtsService.i.index.value;
-        final playing = phase == TtsPhase.playing;
-        final paused = phase == TtsPhase.paused;
-        final chapter = playing || paused;
-
-        String label;
-        if (playing && idx != null) {
-          label = 'Versículo ${idx + 1} de $verseCount';
-        } else if (paused && idx != null) {
-          label = 'Pausado · Versículo ${idx + 1} de $verseCount';
-        } else if (playing) {
-          label = 'Lendo versículo…';
-        } else {
-          label = 'Ouvir o capítulo';
-        }
-
-        return Material(
-          color: t.primaryDark,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
-            child: Row(
-              children: [
-                Icon(playing
-                    ? Icons.graphic_eq
-                    : paused
-                        ? Icons.pause
-                        : Icons.volume_up,
-                    color: Colors.white,
-                    size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(label,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold)),
-                ),
-                if (!chapter || paused)
-                  IconButton(
-                    icon: const Icon(Icons.play_arrow, color: Colors.white),
-                    onPressed: () {
-                      if (paused) {
-                        TtsService.i.resume();
-                      } else {
-                        _playChapter();
-                      }
-                    },
-                  ),
-                if (playing)
-                  IconButton(
-                    icon: const Icon(Icons.pause, color: Colors.white),
-                    onPressed: TtsService.i.pause,
-                  ),
-                if (chapter)
-                  IconButton(
-                    icon: const Icon(Icons.stop, color: Colors.white),
-                    onPressed: TtsService.i.stop,
-                  ),
-              ],
-            ),
-          ),
         );
       },
     );

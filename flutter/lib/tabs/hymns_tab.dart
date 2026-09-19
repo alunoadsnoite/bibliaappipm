@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../common.dart';
 import '../models.dart';
 import '../store.dart';
+import '../tts.dart';
+import '../tts_bar.dart';
 
 class HymnsTab extends StatefulWidget {
   const HymnsTab({super.key});
@@ -63,7 +65,10 @@ class _HymnsTabState extends State<HymnsTab> {
                     IconButton(
                       icon: Icon(Icons.arrow_back_ios_new,
                           size: 20, color: t.primary),
-                      onPressed: () => setState(() => _current = null),
+                      onPressed: () {
+                        TtsService.i.stop();
+                        setState(() => _current = null);
+                      },
                     ),
                   Expanded(
                     child: Text(
@@ -149,6 +154,13 @@ class _HymnsTabState extends State<HymnsTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
+        TtsBar(
+          positionLabel: 'Estrofe',
+          playLabel: 'Ouvir o hino completo',
+          itemCount: h.stanzas.length,
+          onPlay: () => _playHymn(),
+        ),
+        const SizedBox(height: 8),
         Text(
           h.title,
           textAlign: TextAlign.center,
@@ -183,6 +195,18 @@ class _HymnsTabState extends State<HymnsTab> {
         ],
       ],
     );
+  }
+
+  void _playHymn() {
+    final h = _current!;
+    final queue = <String>[
+      'Hino ${h.num}: ${h.title}.',
+      for (var s = 0; s < h.stanzas.length; s++) ...[
+        '${_stanzaLabel(h.stanzaNames[s]).isEmpty ? 'Estrofe ${s + 1}' : _stanzaLabel(h.stanzaNames[s])}. '
+            '${h.stanzas[s].join('. ')}',
+      ],
+    ];
+    TtsService.i.playChapter(queue);
   }
 
   Widget _line({required String text, required String key}) {

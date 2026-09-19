@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../common.dart';
 import '../models.dart';
 import '../store.dart';
+import '../tts.dart';
+import '../tts_bar.dart';
 
 class SongsTab extends StatefulWidget {
   const SongsTab({super.key});
@@ -31,7 +33,10 @@ class _SongsTabState extends State<SongsTab> {
                     IconButton(
                       icon: Icon(Icons.arrow_back_ios_new,
                           size: 20, color: t.primary),
-                      onPressed: () => setState(() => _current = null),
+                      onPressed: () {
+                        TtsService.i.stop();
+                        setState(() => _current = null);
+                      },
                     ),
                   Expanded(
                     child: Text(
@@ -119,9 +124,17 @@ class _SongsTabState extends State<SongsTab> {
     final t = appTheme;
     final s = AppState.i.songs[index];
     final lines = s.lyrics.split('\n');
+    final stanzas = _songStanzas(s.lyrics);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
+        TtsBar(
+          positionLabel: 'Estrofe',
+          playLabel: 'Ouvir a música completa',
+          itemCount: stanzas.length,
+          onPlay: () => _playSong(index),
+        ),
+        const SizedBox(height: 8),
         Text(
           s.title,
           textAlign: TextAlign.center,
@@ -139,6 +152,34 @@ class _SongsTabState extends State<SongsTab> {
             ),
       ],
     );
+  }
+
+  List<String> _songStanzas(String lyrics) {
+    final groups = <List<String>>[];
+    var cur = <String>[];
+    for (final l in lyrics.split('\n')) {
+      if (l.trim().isEmpty) {
+        if (cur.isNotEmpty) {
+          groups.add(cur);
+          cur = [];
+        }
+      } else {
+        cur.add(l.trim());
+      }
+    }
+    if (cur.isNotEmpty) groups.add(cur);
+    return [for (final g in groups) g.join('. ')];
+  }
+
+  void _playSong(int index) {
+    final s = AppState.i.songs[index];
+    final stanzas = _songStanzas(s.lyrics);
+    final queue = <String>[
+      if (s.title.trim().isNotEmpty) '${s.title.trim()}.',
+      for (var i = 0; i < stanzas.length; i++)
+        'Estrofe ${i + 1}. ${stanzas[i]}',
+    ];
+    TtsService.i.playChapter(queue);
   }
 
   Widget _line({required String text, required String key}) {
