@@ -137,3 +137,44 @@ String parseBoletimJson(List<Birthday> birthdays, List<ChurchEvent> events) =>
       'aniversariantes': birthdays.map((b) => b.toJson()).toList(),
       'eventos': events.map((e) => e.toJson()).toList(),
     });
+
+class BibliotecaText {
+  final String id;
+  final String title;
+  final String sub;
+  final List<BibliotecaItem> items;
+
+  BibliotecaText(this.id, this.title, this.sub, this.items);
+
+  factory BibliotecaText.fromJson(Map<String, dynamic> o) => BibliotecaText(
+        o['id'] as String,
+        o['title'] as String,
+        (o['sub'] ?? '') as String,
+        ((o['items'] as List<dynamic>?) ?? [])
+            .map((e) => BibliotecaItem.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+
+  String searchText() {
+    final sb = StringBuffer('$title $sub ');
+    for (final it in items) {
+      sb.write('${it.t} ');
+      for (final p in it.p) {
+        sb.write('$p ');
+      }
+    }
+    return sb.toString().toLowerCase();
+  }
+}
+
+class BibliotecaItem {
+  final String t;
+  final List<String> p;
+
+  BibliotecaItem(this.t, this.p);
+
+  factory BibliotecaItem.fromJson(Map<String, dynamic> o) => BibliotecaItem(
+        (o['t'] ?? '') as String,
+        ((o['p'] as List<dynamic>?) ?? []).map((e) => e as String).toList(),
+      );
+}

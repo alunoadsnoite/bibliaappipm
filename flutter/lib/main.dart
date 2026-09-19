@@ -4,6 +4,7 @@ import 'store.dart';
 import 'tabs/bible_tab.dart';
 import 'tabs/boletim_tab.dart';
 import 'tabs/hymns_tab.dart';
+import 'tabs/library_tab.dart';
 import 'tabs/settings_tab.dart';
 import 'tabs/songs_tab.dart';
 import 'theme.dart';
@@ -80,6 +81,7 @@ class _HomeShellState extends State<HomeShell> {
               BibleTab(),
               HymnsTab(),
               SongsTab(),
+              LibraryTab(),
               BoletimTab(),
               SettingsTab(),
             ],
@@ -100,6 +102,8 @@ class _HomeShellState extends State<HomeShell> {
                   icon: Icon(Icons.library_music), label: 'Hinário'),
               BottomNavigationBarItem(
                   icon: Icon(Icons.music_note), label: 'Músicas'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.local_library), label: 'Biblioteca'),
               BottomNavigationBarItem(
                   icon: Icon(Icons.calendar_month), label: 'Boletim'),
               BottomNavigationBarItem(

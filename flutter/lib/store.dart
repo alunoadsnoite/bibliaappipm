@@ -20,7 +20,7 @@ const List<String> kVersionAbbrs = ['ARA', 'NVI', 'NTLH', 'JFAA', 'BKJ'];
 const String kHighlightColors = 'highlights';
 
 const String kAppName = 'Bíblia IPM';
-const String kAppVersion = '4.7';
+const String kAppVersion = '4.8';
 
 const MethodChannel _migrationChannel =
     MethodChannel('br.com.valdenor.bibliaapp/migration');
@@ -37,6 +37,7 @@ class AppState extends ChangeNotifier {
   List<Song> songs = [];
   List<Birthday> birthdays = [];
   List<ChurchEvent> events = [];
+  List<BibliotecaText> biblioteca = [];
 
   int themeIndex = 0;
   double fontScale = 1.0;
@@ -69,6 +70,13 @@ class AppState extends ChangeNotifier {
 
     await _loadSongs();
     await _loadBoletim();
+
+    final libraryJson =
+        jsonDecode(await rootBundle.loadString('assets/biblioteca.json'))
+            as Map<String, dynamic>;
+    biblioteca = ((libraryJson['texts'] as List<dynamic>?) ?? [])
+        .map((e) => BibliotecaText.fromJson(e as Map<String, dynamic>))
+        .toList();
 
     loaded = true;
     notifyListeners();

@@ -1,8 +1,8 @@
 # Bíblia IPM
 
-Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
+Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.7**
+> Nome do projeto: **BibliaApp** · versão atual: **4.8**
 
 ## Funcionalidades
 
@@ -35,6 +35,16 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - Compartilhar e destacar linhas.
 - **Ouvir a música completa** por voz (em estrofes, com pausa/continuar/parar).
 
+### 📚 Biblioteca
+- **Confissão de Fé de Westminster** (35 capítulos).
+- **Catecismo Maior de Westminster** (193 perguntas, edição IPB).
+- **Catecismo Menor de Westminster** (107 perguntas).
+- **Credo Apostólico** e **Credo Niceno**.
+- **Os Dez Mandamentos** (Êxodo 20, ARA).
+- **Os Cinco Pontos do Calvinismo** (as doutrinas da graça).
+- **As 95 Teses de Lutero** (1517).
+- Busca por documento e **leitura por voz** do texto completo.
+
 ### 📅 Boletim
 - **Aniversariantes do dia**, exibidos automaticamente.
 - **Próximos eventos** da igreja com data, hora e observações (eventos passados somem).
@@ -66,13 +76,13 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 BibliaApp/
 ├── flutter/           # Código principal do app (Flutter)
 │   ├── lib/           # Código Dart (UI, estado, modelos)
-│   │   ├── main.dart  # Ponto de entrada e navegação (5 abas)
+│   │   ├── main.dart  # Ponto de entrada e navegação (6 abas)
 │   │   ├── store.dart # Estado global, persistência e migração
 │   │   ├── models.dart
 │   │   ├── theme.dart # Temas e níveis de fonte
 │   │   ├── common.dart # Destaques, copiar e compartilhar
-│   │   └── tabs/      # Abas: Bíblia, Hinário, Músicas, Boletim, Config
-│   ├── assets/        # Bíblias (5 traduções), hinos, músicas e boletim
+│   │   └── tabs/      # Abas: Bíblia, Hinário, Músicas, Biblioteca, Boletim, Config
+│   ├── assets/        # Bíblias (5 traduções), hinos, músicas, biblioteca e boletim
 │   ├── android/       # Projeto Android
 │   ├── ios/           # Projeto iOS
 │   └── test/          # Testes unitários e de widget
@@ -125,6 +135,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.5 | **Leitura por voz** do hino inteiro (Hinário) e da música inteira (Músicas) |
 | 4.6 | **150 cânticos** do *Livro de Cânticos PG Micheline* na aba Músicas; testes unitários da leitura por voz (engines de TTS testáveis); ajustes de tema/boletim |
 | 4.7 | Versão **BKJ** (Bíblia King James Fiel 1611) como 5ª tradução da Bíblia; livros agrupados por categorias literárias; novo ícone de música na aba Músicas; correção de indexação da NTLH ("2 Samuel" de 38 para 24 capítulos) |
+| 4.8 | Nova aba **Biblioteca**: Confissão de Fé de Westminster, Catecismo Maior e Menor, Credo Apostólico, Credo Niceno, Os Dez Mandamentos, Os Cinco Pontos do Calvinismo e As 95 Teses de Lutero — com busca e leitura por voz |
 
 ## Repositório
 
