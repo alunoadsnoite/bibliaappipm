@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import 'store.dart';
+
 enum TtsPhase { none, playing, paused }
 
 /// Abstração da engine de síntese de voz, para permitir testes sem
@@ -14,6 +16,12 @@ abstract class TtsEngine {
   Future<void> setPitch(double pitch);
   Future<void> speak(String text);
   Future<void> stop();
+
+  /// Vozes disponíveis (mapas com `name`, `locale` e opcional `gender`).
+  Future<List<Map<String, String>>> voices();
+
+  /// Seleciona uma voz pelo nome e localidade.
+  Future<void> selectVoice(String name, String locale);
 }
 
 /// Engine real que usa o plugin flutter_tts.
@@ -40,6 +48,30 @@ class FlutterTtsEngine implements TtsEngine {
 
   @override
   Future<void> stop() => _tts.stop();
+
+  @override
+  Future<List<Map<String, String>>> voices() async {
+    final raw = await _tts.getVoices;
+    if (raw is! List) return const [];
+    final out = <Map<String, String>>[];
+    for (final v in raw) {
+      if (v is! Map) continue;
+      final name = (v['name'] ?? '') as String;
+      final locale = (v['locale'] ?? '') as String;
+      final gender = (v['gender'] ?? '') as String;
+      out.add({
+        'name': name,
+        'locale': locale,
+        if (gender.isNotEmpty) 'gender': gender,
+      });
+    }
+    return out;
+  }
+
+  @override
+  Future<void> selectVoice(String name, String locale) async {
+    await _tts.setVoice({'name': name, 'locale': locale});
+  }
 }
 
 /// Engine falsa para testes unitários.
@@ -50,8 +82,18 @@ class FlutterTtsEngine implements TtsEngine {
 class FakeTtsEngine implements TtsEngine {
   final List<String> spoken = [];
   final List<String> languagesSet = [];
+  final List<double> rates = [];
+  final List<double> pitches = [];
+  String? selectedVoiceName;
+  String? selectedVoiceLocale;
   bool _available = true;
   bool _stopRequested = false;
+
+  /// Vozes usadas nos testes de seleção de voz.
+  List<Map<String, String>> availableVoices = [
+    {'name': 'pt-BR-female', 'locale': 'pt-BR', 'gender': 'female'},
+    {'name': 'pt-BR-male', 'locale': 'pt-BR', 'gender': 'male'},
+  ];
 
   /// Se verdadeiro, [speak] aguarda um microtask antes de completar,
   /// permitindo que o loop observe cancelamentos entre itens.
@@ -68,10 +110,14 @@ class FakeTtsEngine implements TtsEngine {
   Future<bool> isLanguageAvailable(String language) async => _available;
 
   @override
-  Future<void> setSpeechRate(double rate) async {}
+  Future<void> setSpeechRate(double rate) async {
+    rates.add(rate);
+  }
 
   @override
-  Future<void> setPitch(double pitch) async {}
+  Future<void> setPitch(double pitch) async {
+    pitches.add(pitch);
+  }
 
   @override
   Future<void> speak(String text) async {
@@ -91,6 +137,15 @@ class FakeTtsEngine implements TtsEngine {
     _stopRequested = false;
   }
 
+  @override
+  Future<List<Map<String, String>>> voices() async => availableVoices;
+
+  @override
+  Future<void> selectVoice(String name, String locale) async {
+    selectedVoiceName = name;
+    selectedVoiceLocale = locale;
+  }
+
   void setAvailable(bool available) => _available = available;
 }
 
@@ -101,8 +156,7 @@ class FakeTtsEngine implements TtsEngine {
 class TtsService {
   TtsService._({
     TtsEngine? engine,
-  })  : _engine = engine ?? FlutterTtsEngine(),
-        _tts = null {
+  }) : _engine = engine ?? FlutterTtsEngine() {
     // Configuração inicial síncrona — sem chamadas de plataforma.
   }
 
@@ -116,10 +170,6 @@ class TtsService {
 
   /// Engine de TTS injetada (para testes) ou real (produção).
   final TtsEngine _engine;
-
-  /// Referência nula mantida apenas por compatibilidade com código
-  /// existente — não utilizada quando [_engine] está presente.
-  final FlutterTts? _tts;
 
   /// Estado atual da leitura (disponível para a interface reagir).
   final ValueNotifier<TtsPhase> phase = ValueNotifier(TtsPhase.none);
@@ -145,6 +195,8 @@ class TtsService {
       phase.value == TtsPhase.playing || phase.value == TtsPhase.paused;
 
   bool _langReady = false;
+  List<Map<String, String>> _voices = const [];
+  String _appliedVoice = 'default';
 
   Future<void> _ensureLanguage() async {
     if (_langReady) return;
@@ -152,7 +204,50 @@ class TtsService {
     if (!await _engine.isLanguageAvailable('pt-BR')) {
       await _engine.setLanguage('pt');
     }
+    try {
+      _voices = await _engine.voices();
+    } catch (_) {
+      _voices = const [];
+    }
     _langReady = true;
+  }
+
+  /// Escolhe, entre as vozes em português, uma do gênero pedido
+  /// ('female' ou 'male'). Prioriza o campo `gender` e, se ausente,
+  /// tenta adivinhar pelo nome da voz.
+  Map<String, String>? _pickVoice(String gender) {
+    final pt = _voices
+        .where((v) =>
+            (v['locale'] ?? '').toLowerCase().startsWith('pt'))
+        .toList();
+    for (final v in pt) {
+      if ((v['gender'] ?? '').toLowerCase() == gender) return v;
+    }
+    final kw = gender == 'female' ? 'female' : 'male';
+    for (final v in pt) {
+      if ((v['name'] ?? '').toLowerCase().contains(kw)) return v;
+    }
+    return null;
+  }
+
+  /// Aplica as preferências do usuário: velocidade, tom e voz
+  /// (padrão/feminina/masculina, se houver vozes compatíveis instaladas).
+  Future<void> _applyVoice() async {
+    final state = AppState.i;
+    await _engine.setSpeechRate(state.ttsRate);
+    await _engine.setPitch(state.ttsPitch);
+    final wanted = state.ttsVoice;
+    if (wanted == _appliedVoice) return;
+    if (wanted != 'default' && _voices.isNotEmpty) {
+      final v = _pickVoice(wanted);
+      if (v != null) {
+        final name = v['name'] ?? '';
+        if (name.isNotEmpty) {
+          await _engine.selectVoice(name, v['locale'] ?? '');
+        }
+      }
+    }
+    _appliedVoice = wanted;
   }
 
   void _release() {
@@ -161,7 +256,7 @@ class TtsService {
   }
 
   Future<void> _speakOne(String text) {
-    return _ensureLanguage().then((_) {
+    return _ensureLanguage().then((_) => _applyVoice()).then((_) {
       _cancel = false;
       final c = Completer<void>();
       _completer = c;

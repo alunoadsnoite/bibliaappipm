@@ -100,6 +100,15 @@ class SettingsTab extends StatelessWidget {
             const SizedBox(height: 20),
             _backupSection(context),
             const SizedBox(height: 20),
+            _voiceSection(context),
+            const SizedBox(height: 8),
+            _contactTile(
+              icon: Icons.info_outline,
+              title: 'Sobre o app',
+              subtitle: 'Versão $kAppVersion e informações',
+              onTap: () => _aboutDialog(context),
+            ),
+            const SizedBox(height: 20),
             _pixSection(context),
             _contactSection(context),
             const SizedBox(height: 20),
@@ -326,6 +335,169 @@ class SettingsTab extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _aboutDialog(BuildContext context) async {
+    final t = appTheme;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: t.card,
+        title: Text(kAppName, style: TextStyle(color: t.text)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Image.asset(
+                  'assets/logo_ipm.png',
+                  width: 160,
+                  height: 100,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text('Versão $kAppVersion',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: t.muted, fontSize: 13)),
+              const SizedBox(height: 12),
+              Text(
+                'Bíblia em 5 traduções, Hinário Novo Cântico, Músicas, '
+                'Biblioteca de credos e Boletim da igreja — tudo offline. '
+                'Destaques, notas, plano de leitura e backup dos seus dados.',
+                style: TextStyle(color: t.text, fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: _openInstagram,
+                    icon: const Icon(Icons.camera_alt, size: 18),
+                    label: const Text('Instagram'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: _openYoutube,
+                    icon: const Icon(Icons.play_circle_fill, size: 18),
+                    label: const Text('YouTube'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: _openEmail,
+                    icon: const Icon(Icons.email, size: 18),
+                    label: const Text('E-mail'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _voiceSection(BuildContext context) {
+    final t = appTheme;
+    final state = AppState.i;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Leitura por voz',
+            style: TextStyle(
+                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Material(
+          color: t.card,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Voz',
+                    style: TextStyle(color: t.muted, fontSize: 13)),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'default',
+                      label: Text('Padrão'),
+                      icon: Icon(Icons.record_voice_over, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: 'female',
+                      label: Text('Feminina'),
+                      icon: Icon(Icons.female, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: 'male',
+                      label: Text('Masculina'),
+                      icon: Icon(Icons.male, size: 18),
+                    ),
+                  ],
+                  selected: {state.ttsVoice},
+                  onSelectionChanged: (s) => state.setTtsVoice(s.first),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'A voz feminina/masculina é usada se houver vozes '
+                  'compatíveis instaladas no aparelho.',
+                  style: TextStyle(color: t.muted, fontSize: 12, height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Text('Velocidade: ',
+                        style: TextStyle(color: t.muted, fontSize: 13)),
+                    Text(state.ttsRate.toStringAsFixed(2),
+                        style: TextStyle(
+                            color: t.accent,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Slider(
+                  value: state.ttsRate,
+                  min: 0.25,
+                  max: 0.75,
+                  divisions: 10,
+                  activeColor: t.accent,
+                  onChanged: state.setTtsRate,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text('Tom da voz: ',
+                        style: TextStyle(color: t.muted, fontSize: 13)),
+                    Text(state.ttsPitch.toStringAsFixed(2),
+                        style: TextStyle(
+                            color: t.accent,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Slider(
+                  value: state.ttsPitch,
+                  min: 0.5,
+                  max: 2.0,
+                  divisions: 30,
+                  activeColor: t.accent,
+                  onChanged: state.setTtsPitch,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

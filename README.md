@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.9.0**
+> Nome do projeto: **BibliaApp** · versão atual: **4.10.0**
 
 ## Funcionalidades
 
@@ -19,20 +19,22 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
   Paulinas, Cartas Gerais e Revelação), dentro de Antigo e Novo Testamento.
 - **Busca por texto** em qualquer versículo (com 3 ou mais letras) e **busca
   por referência** (ex.: `Jo 3:16`, `Salmos 23`, `1co13`) — resultados
-  paginados com contagem.
+  paginados com contagem, com opção de **limitar a busca ao livro aberto**.
 - **Versículo do dia**: rotação determinística por data, 100% offline.
 - **Plano de leitura anual**: progresso de capítulos lidos, meta diária
-  configurável e contagem por dia.
-- **Continuar lendo**: retoma a última posição de leitura de cada tradução.
-- **Histórico recente**: últimas referências visitadas, com navegação rápida.
-- **Modo leitura (foco)**: leitura em tela cheia, sem barras de navegação.
+  configurável, contagem por dia, **sequência de dias** e botão **Próximo
+  capítulo** para continuar de onde parou.
+- **Capítulos lidos** marcados na grade de capítulos (toque longo desmarca).
+- **Modo leitura (foco)**: leitura em tela cheia, sem barras de navegação,
+  com **deslizar para a esquerda/direita** e passar de capítulo.
 - **Destaques** em 6 cores por versículo e por linha de hino/música.
 - **Notas por versículo** (e por linha de hino/música/documentos), exibidas ao
-  lado do texto.
+  lado do texto, agora independentes da tradução (chaves canônicas).
 - **Comparar traduções** de um mesmo versículo, lado a lado.
 - **Copiar** e **compartilhar** versículos com referência.
 - **Leitura por voz (acessibilidade)** — leia o capítulo inteiro com
-  play/pausa/parar, ou um único versículo pelo menu de toque longo.
+  play/pausa/parar, ou um único versículo pelo menu de toque longo, com
+  **voz feminina/masculina**, **velocidade** e **tom** configuráveis.
 
 ### 🎶 Hinário
 - Hinário **Novo Cântico** completo (405 hinos) com busca por título, autor ou letra.
@@ -61,10 +63,14 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - Cadastro e edição integrados ao calendário.
 
 ### ⚙️ Configurações
-- Tamanho da letra: **Pequeno**, **Normal**, **Grande** e **Extra grande**.
+- Tamanho da letra: **Pequeno**, **Normal**, **Grande** e **Extra grande**
+  (respeita o ajuste de acessibilidade do aparelho).
 - Tema: **Claro**, **Escuro**, **Marrom**, **Verde** e **Sistema** (segue o
   modo claro/escuro do aparelho).
 - **Plano de leitura**: ativar/desativar e definir a meta diária.
+- **Leitura por voz**: escolher a **voz** (padrão/feminina/masculina), a
+  **velocidade** e o **tom** da leitura.
+- **Sobre o app**: logomarca, versão e links (Instagram, YouTube e e-mail).
 - **Backup**: exportar e importar todos os dados (destaques, notas, músicas,
   boletim e progresso) em JSON.
 - Logomarca IPM, **Instagram** e **YouTube** da igreja.
@@ -154,6 +160,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.8 | Nova aba **Biblioteca**: Confissão de Fé de Westminster, Catecismo Maior e Menor, Credo Apostólico, Credo Niceno, Os Dez Mandamentos, Os Cinco Pontos do Calvinismo e As 95 Teses de Lutero — com busca e leitura por voz |
 | 4.8.1 | **Catecismo Maior** com o texto completo: restauradas as perguntas 176, 177 e 192, ausentes na edição IPB (de 193 para 196 perguntas) |
 | 4.9 | **Versículo do dia**, **plano de leitura anual** com meta diária, **continuar lendo** e **histórico recente**; **notas** por versículo/linha; **comparar traduções** lado a lado; **busca por referência** e resultados paginados; **modo leitura** em tela cheia; tema **Sistema**; **backup** (exportar/importar); traduções carregadas **sob demanda**; redes sociais (**Instagram/YouTube**) e **dízimos e ofertas (chave Pix)** nas Configurações; ícone de áudio individual removido do texto (leitura por voz segue via TTS) |
+| 4.10 | **Voz feminina/masculina, velocidade e tom** na leitura por voz; **capítulos lidos** na grade (toque longo desmarca) e **deslizar** entre capítulos no modo leitura; **próximo capítulo** e **sequência de dias** no plano de leitura; **busca restrita ao livro aberto**; **destaques/notas com chaves canônicas** (independentes da tradução) e **migração automática** de dados antigos; tamanho da letra respeitando a **acessibilidade do sistema**; **Sobre o app** nas Configurações; eventos já passados somem do boletim no mesmo dia |
 
 ## Repositório
 

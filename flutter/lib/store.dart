@@ -25,7 +25,7 @@ const Map<String, String> kVersionAssets = {
 };
 
 const String kAppName = 'Bíblia IPM';
-const String kAppVersion = '4.9.0';
+const String kAppVersion = '4.10.0';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -56,6 +56,11 @@ class AppState extends ChangeNotifier {
   String version = 'ara';
   bool loaded = false;
 
+  // ------------------------------------------------------------- leitura por voz
+  double ttsRate = 0.5;
+  double ttsPitch = 1.0;
+  String ttsVoice = 'default'; // 'default' | 'female' | 'male'
+
   Map<String, String> notes = {};
   List<RecentRef> recent = [];
 
@@ -76,6 +81,17 @@ class AppState extends ChangeNotifier {
     version = prefs.getString('biblia_version') ?? 'ara';
     if (!kVersionOrder.contains(version)) version = 'ara';
 
+    ttsRate = prefs.getDouble('tts_rate') ?? 0.5;
+    ttsPitch = prefs.getDouble('tts_pitch') ?? 1.0;
+    ttsVoice = prefs.getString('tts_voice') ?? 'default';
+    if (ttsRate < 0.25) ttsRate = 0.25;
+    if (ttsRate > 0.75) ttsRate = 0.75;
+    if (ttsPitch < 0.5) ttsPitch = 0.5;
+    if (ttsPitch > 2.0) ttsPitch = 2.0;
+    if (!const ['default', 'female', 'male'].contains(ttsVoice)) {
+      ttsVoice = 'default';
+    }
+
     // Carrega apenas a tradução ativa; as demais entram sob demanda.
     bible = await _ensureBible(version);
 
@@ -90,6 +106,7 @@ class AppState extends ChangeNotifier {
     _loadNotes();
     _loadRecent();
     _loadPlan();
+    await _migrateKeysToCanonical();
 
     final libraryJson =
         jsonDecode(await rootBundle.loadString('assets/biblioteca.json'))
@@ -172,6 +189,58 @@ class AppState extends ChangeNotifier {
     }
 
     await prefs.setBool('migrated_native_v1', true);
+  }
+
+  /// Normaliza a chave de destaque/nota da Bíblia. Chaves do formato antigo
+  /// ("v:ABBR C:V") viram chaves canônicas por índice de livro
+  /// ("v:livro:cap:vers"), que não dependem da tradução. Chaves atuais
+  /// são retornadas sem alteração.
+  String normalizeVKey(String key) {
+    final m = RegExp(r'^v:(\S+)\s+(\d+)(?::(\d+))?$').firstMatch(key);
+    if (m == null) return key;
+    int? idx;
+    for (var i = 0; i < bible.length; i++) {
+      if (bible[i].abbr.toLowerCase() == m.group(1)!.toLowerCase()) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx == null) return key;
+    final c = int.parse(m.group(2)!);
+    final v = m.group(3);
+    return v == null ? 'v:$idx:$c' : 'v:$idx:$c:$v';
+  }
+
+  /// Converte, uma única vez, destaques e notas salvos com chaves do formato
+  /// antigo (abreviação da tradução) para chaves canônicas por índice de
+  /// livro, para que fiquem visíveis em qualquer tradução.
+  Future<void> _migrateKeysToCanonical() async {
+    if (prefs.getBool('migrated_keys_v2') == true) return;
+
+    for (final key in prefs.getKeys()) {
+      if (!key.startsWith('hl_v:')) continue;
+      final canon = normalizeVKey(key.substring(3));
+      if (canon == key.substring(3)) continue;
+      final value = prefs.getInt(key);
+      if (value != null) {
+        await prefs.setInt('hl_$canon', value);
+        await prefs.remove(key);
+      }
+    }
+
+    final newNotes = <String, String>{};
+    var changed = false;
+    notes.forEach((key, value) {
+      final canon = !key.startsWith('v:') ? key : normalizeVKey(key);
+      if (canon != key) changed = true;
+      newNotes[canon] = value;
+    });
+    if (changed) {
+      notes = newNotes;
+      await prefs.setString('notes', jsonEncode(notes));
+    }
+
+    await prefs.setBool('migrated_keys_v2', true);
   }
 
   // ------------------------------------------------------------- traduções
@@ -270,6 +339,27 @@ class AppState extends ChangeNotifier {
   void setFontScale(double scale) {
     fontScale = scale;
     prefs.setDouble('font_scale', scale);
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------ leitura por voz
+
+  void setTtsRate(double rate) {
+    ttsRate = rate.clamp(0.25, 0.75).toDouble();
+    prefs.setDouble('tts_rate', ttsRate);
+    notifyListeners();
+  }
+
+  void setTtsPitch(double pitch) {
+    ttsPitch = pitch.clamp(0.5, 2.0).toDouble();
+    prefs.setDouble('tts_pitch', ttsPitch);
+    notifyListeners();
+  }
+
+  void setTtsVoice(String voice) {
+    if (!const ['default', 'female', 'male'].contains(voice)) return;
+    ttsVoice = voice;
+    prefs.setString('tts_voice', voice);
     notifyListeners();
   }
 
@@ -409,11 +499,11 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  String get _todayKey {
-    final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-'
-        '${now.day.toString().padLeft(2, '0')}';
-  }
+  String _dateKey(DateTime d) => '${d.year}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  String get _todayKey => _dateKey(DateTime.now());
 
   int get todayReadCount => readsByDay[_todayKey] ?? 0;
 
@@ -422,17 +512,61 @@ class AppState extends ChangeNotifier {
   double get planProgress =>
       totalChapters == 0 ? 0 : totalRead / totalChapters;
 
-  /// Marca um capítulo como lido (índices canônicos) e atualiza a contagem
-  /// do dia para o plano de leitura.
+  bool isChapterRead(int book, int chapter) =>
+      readChapters.contains('$book:$chapter');
+
+  /// Próximo capítulo ainda não lido (índices canônicos), percorrendo a
+  /// Bíblia na ordem — ou `null` se todos já foram lidos.
+  (int, int)? get nextUnreadChapter {
+    for (var b = 0; b < bible.length; b++) {
+      for (var c = 0; c < bible[b].chapters.length; c++) {
+        if (!isChapterRead(b, c)) return (b, c);
+      }
+    }
+    return null;
+  }
+
+  /// Sequência (em dias) com pelo menos um capítulo lido, contando a partir
+  /// de hoje (ou de ontem, se hoje ainda não leu).
+  int get streak {
+    var n = 0;
+    var day = DateTime.now();
+    if ((readsByDay[_dateKey(day)] ?? 0) == 0) {
+      day = day.subtract(const Duration(days: 1));
+    }
+    while ((readsByDay[_dateKey(day)] ?? 0) > 0) {
+      n++;
+      day = day.subtract(const Duration(days: 1));
+    }
+    return n;
+  }
+
+  /// Marca um capítulo como lido (índices canônicos). A contagem do dia só
+  /// aumenta na primeira vez que o capítulo é marcado.
   Future<void> markChapterRead(int book, int chapter) async {
     final key = '$book:$chapter';
-    readChapters.add(key);
-    final day = _todayKey;
-    readsByDay[day] = (readsByDay[day] ?? 0) + 1;
+    if (readChapters.add(key)) {
+      final day = _todayKey;
+      readsByDay[day] = (readsByDay[day] ?? 0) + 1;
+      await prefs.setString('reads_by_day', jsonEncode(readsByDay));
+    }
     await prefs.setString(
         'read_chapters', jsonEncode(readChapters.toList()..sort()));
-    await prefs.setString('reads_by_day', jsonEncode(readsByDay));
     notifyListeners();
+  }
+
+  /// Desmarca um capítulo lido (para correção manual).
+  Future<void> unmarkChapterRead(int book, int chapter) async {
+    final key = '$book:$chapter';
+    if (readChapters.remove(key)) {
+      final day = _todayKey;
+      final v = (readsByDay[day] ?? 0) - 1;
+      readsByDay[day] = v < 0 ? 0 : v;
+      await prefs.setString('reads_by_day', jsonEncode(readsByDay));
+      await prefs.setString(
+          'read_chapters', jsonEncode(readChapters.toList()..sort()));
+      notifyListeners();
+    }
   }
 
   void setPlanEnabled(bool enabled) {
@@ -520,7 +654,7 @@ class AppState extends ChangeNotifier {
     final highlights = data['highlights'];
     if (highlights is Map) {
       for (final e in highlights.entries) {
-        final key = e.key.toString();
+        final key = normalizeVKey(e.key.toString());
         final value = e.value;
         if (value is int) {
           await prefs.setInt('hl_$key', value);
@@ -531,11 +665,12 @@ class AppState extends ChangeNotifier {
     final notesIn = data['notes'];
     if (notesIn is Map) {
       for (final e in notesIn.entries) {
+        final key = normalizeVKey(e.key.toString());
         final t = (e.value as String? ?? '').trim();
         if (t.isEmpty) {
-          notes.remove(e.key.toString());
+          notes.remove(key);
         } else {
-          notes[e.key.toString()] = t;
+          notes[key] = t;
         }
       }
       await prefs.setString('notes', jsonEncode(notes));

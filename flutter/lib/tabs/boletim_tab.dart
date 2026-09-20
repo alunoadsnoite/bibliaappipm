@@ -28,9 +28,8 @@ class _BoletimTabState extends State<BoletimTab> {
 
   List<ChurchEvent> get _upcoming {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
     final list = AppState.i.events
-        .where((e) => !e.dateTime.isBefore(today))
+        .where((e) => e.dateTime.isAfter(now))
         .toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     return list;

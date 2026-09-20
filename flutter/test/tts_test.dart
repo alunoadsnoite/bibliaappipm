@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:biblia_app/store.dart';
 import 'package:biblia_app/tts.dart';
 
 void main() {
@@ -178,6 +179,60 @@ void main() {
       await svc.playChapter(['dois']);
       // Apenas uma chamada de setLanguage por uso, pois _langReady=true
       expect(engine.languagesSet, ['pt-BR', 'pt']);
+    });
+  });
+
+  group('TtsService — preferências de voz', () {
+    test('aplica velocidade e tom do AppState', () async {
+      AppState.i.ttsRate = 0.6;
+      AppState.i.ttsPitch = 1.2;
+      AppState.i.ttsVoice = 'default';
+      final engine = FakeTtsEngine();
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.rates, [0.6]);
+      expect(engine.pitches, [1.2]);
+      expect(engine.selectedVoiceName, isNull);
+    });
+
+    test('seleciona voz feminina em português quando pedida', () async {
+      AppState.i.ttsVoice = 'female';
+      final engine = FakeTtsEngine();
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.selectedVoiceName, 'pt-BR-female');
+      expect(engine.selectedVoiceLocale, 'pt-BR');
+    });
+
+    test('seleciona voz masculina em português quando pedida', () async {
+      AppState.i.ttsVoice = 'male';
+      final engine = FakeTtsEngine();
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.selectedVoiceName, 'pt-BR-male');
+    });
+
+    test('não seleciona voz quando não há nenhuma em português', () async {
+      AppState.i.ttsVoice = 'female';
+      final engine = FakeTtsEngine()
+        ..availableVoices = [
+          {'name': 'goog-EN', 'locale': 'en-US', 'gender': 'female'},
+        ];
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.selectedVoiceName, isNull);
+    });
+
+    test('não reaplica a voz enquanto a preferência não muda', () async {
+      AppState.i.ttsRate = 0.5;
+      AppState.i.ttsPitch = 1.0;
+      AppState.i.ttsVoice = 'male';
+      final engine = FakeTtsEngine();
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.playChapter(['um', 'dois']);
+      // A voz é escolhida uma única vez, na primeira fala.
+      expect(engine.selectedVoiceName, 'pt-BR-male');
+      expect(engine.rates, [0.5, 0.5]);
     });
   });
 }

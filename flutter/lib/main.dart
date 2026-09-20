@@ -65,9 +65,14 @@ class _BibliaAppState extends State<BibliaApp> {
                 TextSelectionThemeData(cursorColor: t.accent),
           ),
           builder: (context, child) {
+            // Multiplica o fator do aplicativo pelo ajuste de acessibilidade
+            // do sistema, em vez de substituí-lo.
+            final sys = MediaQuery.textScalerOf(context);
+            final sysFactor = sys.scale(16) / 16;
             return MediaQuery(
               data: MediaQuery.of(context).copyWith(
-                textScaler: TextScaler.linear(AppState.i.fontScale),
+                textScaler:
+                    TextScaler.linear(sysFactor * AppState.i.fontScale),
               ),
               child: child!,
             );

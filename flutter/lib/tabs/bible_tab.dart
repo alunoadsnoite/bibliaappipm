@@ -13,7 +13,8 @@ import '../tts_bar.dart';
 class _SearchArg {
   final List<Book> books;
   final String query;
-  _SearchArg(this.books, this.query);
+  final int? bookOnly;
+  _SearchArg(this.books, this.query, [this.bookOnly]);
 }
 
 /// Referência parseada de um texto de busca ("Jo 3:16", "Salmos 23"...).
@@ -128,7 +129,9 @@ _ParsedRef? parseReference(List<Book> books, String text) {
 List<List<int>> _searchVerses(_SearchArg arg) {
   final res = <List<int>>[];
   final lower = arg.query.toLowerCase();
+  final only = arg.bookOnly;
   for (var bi = 0; bi < arg.books.length; bi++) {
+    if (only != null && bi != only) continue;
     final b = arg.books[bi];
     for (var c = 0; c < b.chapters.length; c++) {
       final vs = b.chapters[c];
@@ -165,6 +168,7 @@ class _BibleTabState extends State<BibleTab> {
   List<List<int>>? _results;
   int _visible = 0;
   bool _searching = false;
+  bool _searchBookOnly = false;
   int _job = 0;
 
   @override
@@ -209,6 +213,7 @@ class _BibleTabState extends State<BibleTab> {
       } else {
         _bookIndex = null;
         _focusVerse = null;
+        _searchBookOnly = false;
       }
     });
   }
@@ -233,7 +238,6 @@ class _BibleTabState extends State<BibleTab> {
       _pendingScroll = false;
     });
     AppState.i.savePosition(bookIndex, chapter);
-    AppState.i.markChapterRead(bookIndex, chapter);
     AppState.i.addRecent(bookIndex, chapter);
   }
 
@@ -248,7 +252,6 @@ class _BibleTabState extends State<BibleTab> {
       _search.clear();
     });
     AppState.i.savePosition(book, chapter);
-    AppState.i.markChapterRead(book, chapter);
     AppState.i.addRecent(book, chapter);
   }
 
@@ -290,7 +293,6 @@ class _BibleTabState extends State<BibleTab> {
         _search.clear();
       });
       AppState.i.savePosition(parsed.book, parsed.chapter);
-      AppState.i.markChapterRead(parsed.book, parsed.chapter);
       AppState.i.addRecent(parsed.book, parsed.chapter);
     }
     return true;
@@ -302,8 +304,10 @@ class _BibleTabState extends State<BibleTab> {
       _results = null;
       _searching = true;
     });
-    final res =
-        await compute(_searchVerses, _SearchArg(List.of(AppState.i.bible), query));
+    final res = await compute(
+        _searchVerses,
+        _SearchArg(List.of(AppState.i.bible), query,
+            _searchBookOnly ? _bookIndex : null));
     if (!mounted || myJob != _job) return;
     setState(() {
       _results = res;
@@ -316,6 +320,34 @@ class _BibleTabState extends State<BibleTab> {
     setState(() {
       _visible = (_visible + _kResultsPerPage).clamp(0, _results!.length);
     });
+  }
+
+  /// Alterna a busca para restringir ao livro aberto.
+  void _toggleBookOnly() {
+    final q = _search.text.trim();
+    setState(() {
+      _searchBookOnly = !_searchBookOnly;
+      if (_results != null) {
+        _results = null;
+        _visible = 0;
+        _searching = false;
+      }
+    });
+    if (q.length >= 3) _onQuery(q);
+  }
+
+  /// Abre o próximo capítulo não lido do plano de leitura.
+  void _openPlanNext() {
+    final next = AppState.i.nextUnreadChapter;
+    if (next == null) return;
+    setState(() {
+      _bookIndex = next.$1;
+      _chapter = null;
+      _pendingScroll = false;
+      _searchBookOnly = false;
+    });
+    _goToChapter(next.$2);
+    AppState.i.markChapterRead(next.$1, next.$2);
   }
 
   // --------------------------------------------------------------- interface
@@ -371,7 +403,23 @@ class _BibleTabState extends State<BibleTab> {
                             size: 18),
                         color: t.primary,
                         tooltip: 'Modo leitura',
-                        onPressed: () => setState(() => _focusMode = true),
+                        onPressed: () {
+                          setState(() => _focusMode = true);
+                          AppState.i
+                              .markChapterRead(_bookIndex!, _chapter!);
+                        },
+                      ),
+                    if (_bookIndex != null && _results == null)
+                      IconButton(
+                        icon: Icon(_searchBookOnly
+                            ? Icons.filter_alt
+                            : Icons.filter_alt_off,
+                            size: 18),
+                        color: _searchBookOnly ? t.accent : t.primary,
+                        tooltip: _searchBookOnly && _book != null
+                            ? 'Buscar em ${_book!.name}'
+                            : 'Buscar em toda a Bíblia',
+                        onPressed: _toggleBookOnly,
                       ),
                     const SizedBox(width: 8),
                     SizedBox(
@@ -623,6 +671,8 @@ class _BibleTabState extends State<BibleTab> {
     final progress = total == 0 ? 0.0 : (read / total).clamp(0.0, 1.0);
     final pct = (progress * 100).toStringAsFixed(1);
     final doneToday = today >= daily;
+    final streak = state.streak;
+    final next = state.nextUnreadChapter;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       child: Material(
@@ -659,10 +709,35 @@ class _BibleTabState extends State<BibleTab> {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                '$read de $total capítulos lidos ($pct%)',
-                style: TextStyle(color: t.muted, fontSize: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$read de $total capítulos lidos ($pct%)',
+                      style: TextStyle(color: t.muted, fontSize: 12),
+                    ),
+                  ),
+                  Icon(Icons.local_fire_department,
+                      color: streak > 0 ? t.accent : t.muted, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    streak == 1
+                        ? 'Sequência: 1 dia'
+                        : 'Sequência: $streak dias',
+                    style: TextStyle(color: t.muted, fontSize: 12),
+                  ),
+                ],
               ),
+              if (next != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _openPlanNext,
+                    icon: const Icon(Icons.arrow_forward, size: 16),
+                    label: const Text('Próximo capítulo'),
+                    style: TextButton.styleFrom(foregroundColor: t.accent),
+                  ),
+                ),
             ],
           ),
         ),
@@ -744,15 +819,25 @@ class _BibleTabState extends State<BibleTab> {
       ),
       itemCount: n,
       itemBuilder: (context, i) {
+        final read = AppState.i.isChapterRead(_bookIndex!, i);
         return Material(
-          color: t.card,
+          color: read ? t.primaryDark : t.card,
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: () => _goToChapter(i),
+            onLongPress: () {
+              if (read) {
+                AppState.i.unmarkChapterRead(_bookIndex!, i);
+              } else {
+                AppState.i.markChapterRead(_bookIndex!, i);
+              }
+            },
             child: Center(
               child: Text('${i + 1}',
-                  style: TextStyle(color: t.text, fontSize: 14)),
+                  style: TextStyle(
+                      color: read ? Colors.white : t.text,
+                      fontSize: 14)),
             ),
           ),
         );
@@ -814,22 +899,34 @@ class _BibleTabState extends State<BibleTab> {
     final b = _book!;
     final chapter = _chapter!;
     final verses = b.chapters[chapter];
-    return Stack(
-      children: [
-        _verseList(verses, focusMode: true),
-        Positioned(
-          right: 16,
-          bottom: 24,
-          child: FloatingActionButton.small(
-            backgroundColor: t.card,
-            foregroundColor: t.primary,
-            heroTag: 'exit_focus',
-            tooltip: 'Sair do modo leitura',
-            onPressed: () => setState(() => _focusMode = false),
-            child: const Icon(Icons.fullscreen_exit),
+    final hasPrev = chapter > 0;
+    final hasNext = chapter + 1 < b.chapters.length;
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        final v = details.primaryVelocity ?? 0;
+        if (v < -200 && hasNext) {
+          _goToChapter(chapter + 1);
+        } else if (v > 200 && hasPrev) {
+          _goToChapter(chapter - 1);
+        }
+      },
+      child: Stack(
+        children: [
+          _verseList(verses, focusMode: true),
+          Positioned(
+            right: 16,
+            bottom: 24,
+            child: FloatingActionButton.small(
+              backgroundColor: t.card,
+              foregroundColor: t.primary,
+              heroTag: 'exit_focus',
+              tooltip: 'Sair do modo leitura',
+              onPressed: () => setState(() => _focusMode = false),
+              child: const Icon(Icons.fullscreen_exit),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -877,21 +974,13 @@ class _BibleTabState extends State<BibleTab> {
     final b = _book!;
     final chapter = _chapter!;
     final ref = '${b.abbr} ${chapter + 1}:${v + 1}';
-    final key = 'v:$ref';
+    final key = 'v:${_bookIndex!}:${chapter + 1}:${v + 1}';
     final reading = readingIndex == v;
     final note = AppState.i.getNote(key) ?? '';
     final hasNote = note.trim().isNotEmpty;
     return GestureDetector(
-      onLongPress: () => showLineMenu(
-        context,
-        title: ref,
-        text: '$ref  ${verses[v]}',
-        highlightKey: key,
-        note: note,
-        onHighlightChanged: (_) => setState(() {}),
-        onNoteChanged: (_) => setState(() {}),
-        onCompare: () => _showComparison(bAbbr: b.abbr, book: _bookIndex!, chapter: chapter, verse: v),
-      ),
+      onTap: () => _verseMenu(verses, v),
+      onLongPress: () => _verseMenu(verses, v),
       child: Container(
         color: reading
             ? t.accent.withValues(alpha: 0.16)
@@ -953,6 +1042,25 @@ class _BibleTabState extends State<BibleTab> {
     );
   }
 
+  /// Abre o menu do versículo (toque ou toque longo).
+  Future<void> _verseMenu(List<String> verses, int v) {
+    final b = _book!;
+    final chapter = _chapter!;
+    final ref = '${b.abbr} ${chapter + 1}:${v + 1}';
+    final key = 'v:${_bookIndex!}:${chapter + 1}:${v + 1}';
+    return showLineMenu(
+      context,
+      title: ref,
+      text: '$ref  ${verses[v]}',
+      highlightKey: key,
+      note: AppState.i.getNote(key) ?? '',
+      onHighlightChanged: (_) => setState(() {}),
+      onNoteChanged: (_) => setState(() {}),
+      onCompare: () =>
+          _showComparison(bAbbr: b.abbr, book: _bookIndex!, chapter: chapter, verse: v),
+    );
+  }
+
   void _playChapter() {
     final verses = _book!.chapters[_chapter!];
     final queue = [
@@ -961,6 +1069,7 @@ class _BibleTabState extends State<BibleTab> {
         'Versículo ${v + 1}. ${verses[v]}',
     ];
     TtsService.i.playChapter(queue);
+    AppState.i.markChapterRead(_bookIndex!, _chapter!);
   }
 
   // -------------------------------------------------------------- resultados
@@ -986,7 +1095,8 @@ class _BibleTabState extends State<BibleTab> {
             children: [
               Text(
                 '${res.length} resultado${res.length == 1 ? '' : 's'}'
-                '${res.length > _visible ? ' (mostrando $_visible)' : ''}',
+                '${res.length > _visible ? ' (mostrando $_visible)' : ''}'
+                '${_searchBookOnly && _bookIndex != null ? ' · em ${AppState.i.bible[_bookIndex!].name}' : ''}',
                 style: TextStyle(color: t.muted, fontSize: 12),
               ),
             ],

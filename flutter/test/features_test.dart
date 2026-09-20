@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:biblia_app/daily.dart';
 import 'package:biblia_app/store.dart';
 import 'package:biblia_app/tabs/bible_tab.dart';
@@ -85,21 +88,58 @@ void main() {
 
   group('notas', () {
     test('cria, lê e remove uma nota', () async {
-      await AppState.i.setNote('v:Sl 23:1', 'Meu versículo favorito.');
-      expect(AppState.i.getNote('v:Sl 23:1'), 'Meu versículo favorito.');
-      expect(AppState.i.hasNote('v:Sl 23:1'), isTrue);
-      await AppState.i.setNote('v:Sl 23:1', '  ');
-      expect(AppState.i.hasNote('v:Sl 23:1'), isFalse);
+      await AppState.i.setNote('v:18:23:1', 'Meu versículo favorito.');
+      expect(AppState.i.getNote('v:18:23:1'), 'Meu versículo favorito.');
+      expect(AppState.i.hasNote('v:18:23:1'), isTrue);
+      await AppState.i.setNote('v:18:23:1', '  ');
+      expect(AppState.i.hasNote('v:18:23:1'), isFalse);
     });
   });
 
   group('plano de leitura', () {
-    test('marca capítulo lido e soma a meta do dia', () async {
+    test('marca capítulo lido e soma a meta do dia uma única vez', () async {
       final before = AppState.i.totalRead;
       final today = AppState.i.todayReadCount;
       await AppState.i.markChapterRead(18, 22);
       expect(AppState.i.totalRead, before + 1);
       expect(AppState.i.todayReadCount, today + 1);
+      // repetir o mesmo capítulo não conta de novo
+      await AppState.i.markChapterRead(18, 22);
+      expect(AppState.i.totalRead, before + 1);
+      expect(AppState.i.todayReadCount, today + 1);
+    });
+
+    test('desmarcar capítulo lido remove do total', () async {
+      await AppState.i.markChapterRead(18, 22);
+      final afterRead = AppState.i.totalRead;
+      await AppState.i.unmarkChapterRead(18, 22);
+      expect(AppState.i.totalRead, afterRead - 1);
+      expect(AppState.i.isChapterRead(18, 22), isFalse);
+    });
+
+    test('próximo capítulo a ler é o primeiro não lido', () async {
+      AppState.i.markChapterRead(0, 0);
+      AppState.i.markChapterRead(0, 1);
+      final next = AppState.i.nextUnreadChapter;
+      expect(next, isNotNull);
+      expect(next!.$1, 0);
+      expect(next.$2, 2);
+    });
+
+    test('streak conta dias seguidos com leitura', () async {
+      AppState.i.markChapterRead(0, 0); // hoje
+      final byDay = jsonDecode(
+          AppState.i.prefs.getString('reads_by_day')!) as Map<String, dynamic>;
+      String key(DateTime d) => '${d.year}-'
+          '${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+      final d1 = DateTime.now().subtract(const Duration(days: 1));
+      final d2 = DateTime.now().subtract(const Duration(days: 2));
+      byDay[key(d1)] = 1;
+      byDay[key(d2)] = 1;
+      await AppState.i.prefs.setString('reads_by_day', jsonEncode(byDay));
+      await AppState.i.load();
+      expect(AppState.i.streak, greaterThanOrEqualTo(3));
     });
 
     test('meta diária padrão e personalizada', () {
@@ -111,10 +151,33 @@ void main() {
     });
   });
 
+  group('migração de chaves canônicas', () {
+    test('converte destaques e notas do formato antigo', () async {
+      SharedPreferences.setMockInitialValues({
+        'hl_v:Jo 3:16': 1,
+        'notes': jsonEncode({'v:Sl 23:1': 'Lindo.'}),
+      });
+      await AppState.i.load();
+      expect(AppState.i.getHighlight('v:42:3:16'), 1);
+      expect(AppState.i.getHighlight('v:Jo 3:16'), -1);
+      expect(AppState.i.getNote('v:18:23:1'), 'Lindo.');
+    });
+
+    test('normaliza chaves importadas de backups antigos', () async {
+      final json = AppState.i.buildExportJson();
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      data['highlights'] = {'v:Jo 3:16': 3};
+      data['notes'] = {'v:Jo 3:16': 'Anotado no backup antigo.'};
+      await AppState.i.importFromJson(jsonEncode(data));
+      expect(AppState.i.getHighlight('v:42:3:16'), 3);
+      expect(AppState.i.getNote('v:42:3:16'), 'Anotado no backup antigo.');
+    });
+  });
+
   group('backup', () {
     test('exporta e importa destaques, notas e progresso', () async {
-      await AppState.i.setHighlight('v:Jo 3:16', 2);
-      await AppState.i.setNote('v:Jo 3:16', 'Anotado.');
+      await AppState.i.setHighlight('v:42:3:16', 2);
+      await AppState.i.setNote('v:42:3:16', 'Anotado.');
       await AppState.i.markChapterRead(0, 0);
       await AppState.i.savePosition(1, 1);
 
@@ -124,12 +187,12 @@ void main() {
       await AppState.i.load();
 
       expect(AppState.i.totalRead, 0);
-      expect(AppState.i.getHighlight('v:Jo 3:16'), -1);
+      expect(AppState.i.getHighlight('v:42:3:16'), -1);
 
       await AppState.i.importFromJson(json);
 
-      expect(AppState.i.getHighlight('v:Jo 3:16'), 2);
-      expect(AppState.i.getNote('v:Jo 3:16'), 'Anotado.');
+      expect(AppState.i.getHighlight('v:42:3:16'), 2);
+      expect(AppState.i.getNote('v:42:3:16'), 'Anotado.');
       expect(AppState.i.totalRead, 1);
       expect(AppState.i.lastPosition!.chapter, 1);
     });
@@ -144,6 +207,15 @@ void main() {
       for (final (_, text) in rows) {
         expect(text.trim(), isNotEmpty);
       }
+    });
+  });
+
+  group('versão do app', () {
+    test('kAppVersion corresponde ao pubspec', () {
+      final pub = File('pubspec.yaml').readAsStringSync();
+      final m = RegExp(r'^version:\s*(.+)$', multiLine: true).firstMatch(pub);
+      expect(m, isNotNull);
+      expect(kAppVersion, m!.group(1)!.trim().split('+').first);
     });
   });
 }
