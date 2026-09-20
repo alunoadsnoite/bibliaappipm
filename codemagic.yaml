@@ -9,7 +9,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
-        BUNDLE_ID: "br.com.valdenor.bibliaApp"
+        BUNDLE_ID: "br.com.valdenor.bibliaapp"
       flutter: stable
       xcode: latest
       cocoapods: default
