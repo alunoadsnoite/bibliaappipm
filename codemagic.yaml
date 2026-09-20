@@ -12,6 +12,7 @@ workflows:
         BUNDLE_ID: "br.com.valdenor.bibliaApp"
       flutter: stable
       xcode: latest
+      cocoapods: default
     cache:
       cache_paths:
         - $HOME/.pub-cache
