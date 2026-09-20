@@ -223,6 +223,43 @@ void main() {
       expect(engine.selectedVoiceName, isNull);
     });
 
+    test('sem voz feminina instalada, o tom simula o gênero', () async {
+      AppState.i.ttsPitch = 1.0;
+      AppState.i.ttsVoice = 'female';
+      final engine = FakeTtsEngine()
+        ..availableVoices = [
+          {'name': 'goog-EN', 'locale': 'en-US', 'gender': 'female'},
+        ];
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.selectedVoiceName, isNull);
+      expect(engine.pitches, [1.5]); // agudo (feminina)
+    });
+
+    test('sem voz masculina instalada, o tom simula o gênero', () async {
+      AppState.i.ttsPitch = 1.0;
+      AppState.i.ttsVoice = 'male';
+      final engine = FakeTtsEngine()
+        ..availableVoices = [
+          {'name': 'goog-EN', 'locale': 'en-US', 'gender': 'male'},
+        ];
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.selectedVoiceName, isNull);
+      expect(engine.pitches, [0.6]); // grave (masculina)
+    });
+
+    test('com voz instalada, usa a voz real e mantém o tom do usuário',
+        () async {
+      AppState.i.ttsPitch = 1.2;
+      AppState.i.ttsVoice = 'female';
+      final engine = FakeTtsEngine();
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.selectedVoiceName, 'pt-BR-female');
+      expect(engine.pitches, [1.2]);
+    });
+
     test('não reaplica a voz enquanto a preferência não muda', () async {
       AppState.i.ttsRate = 0.5;
       AppState.i.ttsPitch = 1.0;

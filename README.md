@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **4.10.0**
+> Nome do projeto: **BibliaApp** · versão atual: **5.0.0**
 
 ## Funcionalidades
 
@@ -34,7 +34,9 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Copiar** e **compartilhar** versículos com referência.
 - **Leitura por voz (acessibilidade)** — leia o capítulo inteiro com
   play/pausa/parar, ou um único versículo pelo menu de toque longo, com
-  **voz feminina/masculina**, **velocidade** e **tom** configuráveis.
+  **voz feminina/masculina**, **velocidade** e **tom** configuráveis. Quando
+  o gênero escolhido não estiver instalado no aparelho, o tom simula a voz
+  (aguda/grave) — o recurso funciona **mesmo fora do ar**.
 
 ### 🎶 Hinário
 - Hinário **Novo Cântico** completo (405 hinos) com busca por título, autor ou letra.
@@ -161,6 +163,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 4.8.1 | **Catecismo Maior** com o texto completo: restauradas as perguntas 176, 177 e 192, ausentes na edição IPB (de 193 para 196 perguntas) |
 | 4.9 | **Versículo do dia**, **plano de leitura anual** com meta diária, **continuar lendo** e **histórico recente**; **notas** por versículo/linha; **comparar traduções** lado a lado; **busca por referência** e resultados paginados; **modo leitura** em tela cheia; tema **Sistema**; **backup** (exportar/importar); traduções carregadas **sob demanda**; redes sociais (**Instagram/YouTube**) e **dízimos e ofertas (chave Pix)** nas Configurações; ícone de áudio individual removido do texto (leitura por voz segue via TTS) |
 | 4.10 | **Voz feminina/masculina, velocidade e tom** na leitura por voz; **capítulos lidos** na grade (toque longo desmarca) e **deslizar** entre capítulos no modo leitura; **próximo capítulo** e **sequência de dias** no plano de leitura; **busca restrita ao livro aberto**; **destaques/notas com chaves canônicas** (independentes da tradução) e **migração automática** de dados antigos; tamanho da letra respeitando a **acessibilidade do sistema**; **Sobre o app** nas Configurações; eventos já passados somem do boletim no mesmo dia |
+| 5.0 | **Simulação de voz por tom**: quando a voz do gênero escolhido não estiver instalada no aparelho, o app ajusta o tom (agudo na feminina, grave na masculina) — o recurso funciona **100% offline** |
 
 ## Repositório
 

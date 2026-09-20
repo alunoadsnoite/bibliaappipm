@@ -449,8 +449,9 @@ class SettingsTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'A voz feminina/masculina é usada se houver vozes '
-                  'compatíveis instaladas no aparelho.',
+                  'Se não houver voz do gênero instalada no aparelho, o tom '
+                  'é ajustado para simular a voz (aguda na feminina, grave '
+                  'na masculina) — mesmo offline.',
                   style: TextStyle(color: t.muted, fontSize: 12, height: 1.4),
                 ),
                 const SizedBox(height: 14),

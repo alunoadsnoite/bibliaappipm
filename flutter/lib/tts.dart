@@ -230,24 +230,43 @@ class TtsService {
     return null;
   }
 
+  /// Fatores de simulação de gênero quando não há voz instalada com o gênero
+  /// pedido: tom mais agudo para feminina, mais grave para masculina.
+  static const double kSimFemalePitch = 1.5;
+  static const double kSimMalePitch = 0.6;
+
   /// Aplica as preferências do usuário: velocidade, tom e voz
-  /// (padrão/feminina/masculina, se houver vozes compatíveis instaladas).
+  /// (padrão/feminina/masculina). Quando não existir voz do gênero pedido
+  /// instalada no aparelho, o tom é ajustado para simular o gênero —
+  /// permitindo o recurso mesmo 100% offline.
   Future<void> _applyVoice() async {
     final state = AppState.i;
-    await _engine.setSpeechRate(state.ttsRate);
-    await _engine.setPitch(state.ttsPitch);
     final wanted = state.ttsVoice;
-    if (wanted == _appliedVoice) return;
-    if (wanted != 'default' && _voices.isNotEmpty) {
+
+    bool genderApplied = false;
+    if (wanted != 'default' && wanted != _appliedVoice && _voices.isNotEmpty) {
       final v = _pickVoice(wanted);
-      if (v != null) {
-        final name = v['name'] ?? '';
-        if (name.isNotEmpty) {
-          await _engine.selectVoice(name, v['locale'] ?? '');
-        }
+      final name = v?['name'] ?? '';
+      if (name.isNotEmpty) {
+        await _engine.selectVoice(name, v?['locale'] ?? '');
+        genderApplied = true;
       }
     }
-    _appliedVoice = wanted;
+
+    var pitch = state.ttsPitch;
+    if (wanted != 'default') {
+      final usingRealVoice =
+          genderApplied || _appliedVoice.endsWith(':real');
+      if (!usingRealVoice) {
+        pitch = wanted == 'female'
+            ? (pitch * kSimFemalePitch).clamp(0.5, 2.0).toDouble()
+            : (pitch * kSimMalePitch).clamp(0.5, 2.0).toDouble();
+      }
+    }
+
+    await _engine.setPitch(pitch);
+    await _engine.setSpeechRate(state.ttsRate);
+    _appliedVoice = genderApplied ? '$wanted:real' : wanted;
   }
 
   void _release() {
