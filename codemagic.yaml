@@ -1,0 +1,92 @@
+workflows:
+  ios:
+    name: iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      groups:
+        - app_store_connect
+      vars:
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+        BUNDLE_ID: "br.com.valdenor.bibliaApp"
+      flutter: stable
+      xcode: latest
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $FLUTTER_ROOT/.pub-cache
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          cd flutter
+          flutter pub get
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --platform ios \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          cd flutter
+          BUILD_NAME=$(grep -oE '^version: .*' pubspec.yaml | sed 's/version: //' | cut -d+ -f1)
+          BUILD_NUMBER=$(grep -oE '\+[0-9]+' pubspec.yaml | tr -d '+')
+          flutter build ipa \
+            --release \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER"
+    artifacts:
+      - flutter/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - valdenorsa@proton.me
+        notify:
+          success: true
+          failure: true
+
+  android:
+    name: Android
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      flutter: stable
+      xcode: latest
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/.gradle/caches
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          cd flutter
+          flutter pub get
+      - name: Set up release signing
+        script: |
+          cd flutter
+          if [ -n "$CM_KEYSTORE_PATH" ]; then
+            echo "storeFile=$CM_KEYSTORE_PATH" > android/key.properties
+            echo "keyAlias=$CM_KEY_ALIAS" >> android/key.properties
+            echo "storePassword=$CM_KEYSTORE_PASSWORD" >> android/key.properties
+            echo "keyPassword=$CM_KEY_PASSWORD" >> android/key.properties
+          fi
+      - name: Build APK and AAB
+        script: |
+          cd flutter
+          flutter build apk --release
+          flutter build appbundle --release
+    artifacts:
+      - flutter/build/app/outputs/flutter-apk/*.apk
+      - flutter/build/app/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients:
+          - valdenorsa@proton.me
+        notify:
+          success: true
+          failure: true
