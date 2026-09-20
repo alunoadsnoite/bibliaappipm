@@ -28,9 +28,15 @@ class _BoletimTabState extends State<BoletimTab> {
 
   List<ChurchEvent> get _upcoming {
     final now = DateTime.now();
-    final list = AppState.i.events
-        .where((e) => e.dateTime.isAfter(now))
-        .toList()
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final list = AppState.i.events.where((e) {
+      final dt = e.dateTime;
+      if (e.time.trim().isEmpty) {
+        // Evento de dia inteiro (sem hora) permanece visível o dia todo.
+        return !dt.isBefore(todayStart);
+      }
+      return dt.isAfter(now);
+    }).toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     return list;
   }

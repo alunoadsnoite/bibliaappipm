@@ -90,4 +90,14 @@ void main() {
     final label = kFontLevelNames[fontLevelIndex(scale)];
     expect(currentLevelLabel(label), findsOneWidget);
   });
+
+  testWidgets('todos os temas renderizam a HomeShell sem erro',
+      (tester) async {
+    for (var i = 0; i < kThemes.length; i++) {
+      AppState.i.setTheme(i);
+      await tester.pumpWidget(const BibliaApp());
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(tester.takeException(), isNull);
+  });
 }

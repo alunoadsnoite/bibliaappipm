@@ -23,25 +23,6 @@ class BibliaApp extends StatefulWidget {
 }
 
 class _BibliaAppState extends State<BibliaApp> {
-  VoidCallback? _prevBrightnessCallback;
-
-  @override
-  void initState() {
-    super.initState();
-    final dispatcher = WidgetsBinding.instance.platformDispatcher;
-    _prevBrightnessCallback = dispatcher.onPlatformBrightnessChanged;
-    dispatcher.onPlatformBrightnessChanged = () {
-      if (mounted) setState(() {});
-    };
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
-        _prevBrightnessCallback;
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -99,7 +80,7 @@ class _HomeShellState extends State<HomeShell> {
     return ListenableBuilder(
       listenable: AppState.i,
       builder: (context, _) {
-        final t = kThemes[AppState.i.themeIndex];
+        final t = themeForIndex(AppState.i.themeIndex);
         return Scaffold(
           body: IndexedStack(
             index: _index,

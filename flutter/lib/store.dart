@@ -74,7 +74,7 @@ class AppState extends ChangeNotifier {
     await _migrateFromNative();
     themeIndex = prefs.getInt('theme') ??
         ((prefs.getBool('night') ?? false) ? 1 : 0);
-    if (themeIndex < 0 || themeIndex > kSystemThemeIndex) themeIndex = 0;
+    if (themeIndex < 0 || themeIndex >= kThemes.length) themeIndex = 0;
     fontScale = prefs.getDouble('font_scale') ?? 1.0;
     if (fontScale < 0.5) fontScale = 0.5;
     if (fontScale > 1.5) fontScale = 1.5;
@@ -747,7 +747,7 @@ class AppState extends ChangeNotifier {
       await setVersion(savedVersion);
     }
     final theme = data['theme'];
-    if (theme is int && theme >= 0 && theme <= kSystemThemeIndex) {
+    if (theme is int && theme >= 0 && theme < kThemes.length) {
       setTheme(theme);
     }
 

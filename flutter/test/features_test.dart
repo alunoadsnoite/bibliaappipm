@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:biblia_app/daily.dart';
 import 'package:biblia_app/store.dart';
 import 'package:biblia_app/tabs/bible_tab.dart';
+import 'package:biblia_app/theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -216,6 +217,28 @@ void main() {
       final m = RegExp(r'^version:\s*(.+)$', multiLine: true).firstMatch(pub);
       expect(m, isNotNull);
       expect(kAppVersion, m!.group(1)!.trim().split('+').first);
+    });
+  });
+
+  group('tema', () {
+    test('tema do sistema não existe mais', () {
+      expect(kThemeNames, isNot(contains('Sistema')));
+      expect(kThemeNames.length, kThemes.length);
+    });
+
+    test('tema persistido inválido (Sistema removido) é normalizado',
+        () async {
+      SharedPreferences.setMockInitialValues({'theme': 4});
+      await AppState.i.load();
+      expect(AppState.i.themeIndex, 0);
+    });
+
+    test('importar backup com tema inválido não quebra', () async {
+      final json = AppState.i.buildExportJson();
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      data['theme'] = 4;
+      await AppState.i.importFromJson(jsonEncode(data));
+      expect(AppState.i.themeIndex, 0);
     });
   });
 }

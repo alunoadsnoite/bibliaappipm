@@ -67,8 +67,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 ### ⚙️ Configurações
 - Tamanho da letra: **Pequeno**, **Normal**, **Grande** e **Extra grande**
   (respeita o ajuste de acessibilidade do aparelho).
-- Tema: **Claro**, **Escuro**, **Marrom**, **Verde** e **Sistema** (segue o
-  modo claro/escuro do aparelho).
+- Tema: **Claro**, **Escuro**, **Marrom** e **Verde**.
 - **Plano de leitura**: ativar/desativar e definir a meta diária.
 - **Leitura por voz**: escolher a **voz** (padrão/feminina/masculina), a
   **velocidade** e o **tom** da leitura.

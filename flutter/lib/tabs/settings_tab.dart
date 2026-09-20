@@ -506,7 +506,6 @@ class SettingsTab extends StatelessWidget {
     final t = appTheme;
     final selected = AppState.i.themeIndex == index;
     final swatch = themeForIndex(index);
-    final isSystem = index == kSystemThemeIndex;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -526,17 +525,9 @@ class SettingsTab extends StatelessWidget {
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: isSystem
-                        ? resolveBrightness(index) == Brightness.dark
-                            ? kEscuro.primary
-                            : kClaro.primary
-                        : swatch.primary,
+                    color: swatch.primary,
                     shape: BoxShape.circle,
                   ),
-                  child: isSystem
-                      ? const Icon(Icons.brightness_auto,
-                          size: 12, color: Colors.white)
-                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
