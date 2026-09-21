@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **5.0.0**
+> Nome do projeto: **BibliaApp** · versão atual: **5.1.0**
 
 ## Funcionalidades
 
@@ -30,6 +30,8 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Destaques** em 6 cores por versículo e por linha de hino/música.
 - **Notas por versículo** (e por linha de hino/música/documentos), exibidas ao
   lado do texto, agora independentes da tradução (chaves canônicas).
+- **Letras vermelhas**: destaca em vermelho as **falas de Jesus e de Deus**
+  em toda a Bíblia (recurso opcional nas Configurações).
 - **Comparar traduções** de um mesmo versículo, lado a lado.
 - **Copiar** e **compartilhar** versículos com referência.
 - **Leitura por voz (acessibilidade)** — leia o capítulo inteiro com
@@ -167,6 +169,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 5.0.2 | **Destaque do versículo sendo lido** corrigido (antes marcava o versículo seguinte); **Oração Dominical (Pai Nosso)** e **As Cinco Solas da Reforma** na Biblioteca; modo leitura com **texto limpo em coluna centralizada** (oculta números, notas e destaques), **imersão total por toque** e **scroll contínuo entre capítulos/livros** |
 | 5.0.3 | **Seleção múltipla de versículos**: toque longo (ou menu → **Selecionar**) marca vários versículos para **copiar** (com ou sem referências), **compartilhar**, **anotar** e **destacar** de uma vez, com botão "selecionar tudo" e barra de ações; botão "texto limpo" removido do modo leitura |
 | 5.0.4 | **Leitura contínua também no modo normal**: deslizar à esquerda/direita troca de capítulo (cruzando livros) e, ao chegar ao fim do texto, o próximo capítulo entra automaticamente — como no modo leitura |
+| 5.1.0 | **Letras vermelhas**: falas de Jesus e de Deus destacadas em vermelho em toda a Bíblia (AT e NT), com opção de ativar/desativar nas Configurações |
 
 ## Repositório
 
