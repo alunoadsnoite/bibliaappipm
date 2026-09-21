@@ -32,8 +32,8 @@ class _BibliaAppState extends State<BibliaApp> {
     return ListenableBuilder(
       listenable: AppState.i,
       builder: (context, _) {
-        final t = themeForIndex(AppState.i.themeIndex, sys);
-        final brightness = resolveBrightness(AppState.i.themeIndex, sys);
+        final t = themeForIndex(AppState.i.displayedThemeIndex, sys);
+        final brightness = resolveBrightness(AppState.i.displayedThemeIndex, sys);
         return MaterialApp(
           title: kAppName,
           debugShowCheckedModeBanner: false,
@@ -86,7 +86,7 @@ class _HomeShellState extends State<HomeShell> {
     return ListenableBuilder(
       listenable: AppState.i,
       builder: (context, _) {
-        final t = themeForIndex(AppState.i.themeIndex, sys);
+        final t = themeForIndex(AppState.i.displayedThemeIndex, sys);
         return Scaffold(
           body: IndexedStack(
             index: _index,

@@ -394,6 +394,30 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ------------------------------------------------------------- tema em leitura
+  int? _readingThemeOverride;
+
+  /// Índice de tema exibido. Enquanto o modo leitura estiver ativo, retorna o
+  /// tema temporário escolhido pelo atalho claro/escuro; caso contrário, o
+  /// tema salvo pelo usuário.
+  int get displayedThemeIndex => _readingThemeOverride ?? themeIndex;
+
+  /// Alterna momentaneamente entre claro e escuro no modo leitura, sem mudar a
+  /// preferência salva pelo usuário.
+  void toggleReadingTheme() {
+    final base = _readingThemeOverride ?? themeIndex;
+    final eff = effectiveThemeIndex(base, systemBrightness);
+    _readingThemeOverride = eff == 1 ? 0 : 1;
+    notifyListeners();
+  }
+
+  /// Restaura o tema salvo pelo usuário ao sair do modo leitura.
+  void endReadingTheme() {
+    if (_readingThemeOverride == null) return;
+    _readingThemeOverride = null;
+    notifyListeners();
+  }
+
   void setFontScale(double scale) {
     fontScale = scale;
     prefs.setDouble('font_scale', scale);

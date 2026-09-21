@@ -7,6 +7,7 @@ import '../common.dart';
 import '../daily.dart';
 import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 import '../tts.dart';
 import '../tts_bar.dart';
 
@@ -252,7 +253,16 @@ class _BibleTabState extends State<BibleTab> {
         _searchBookOnly = false;
       }
     });
+    if (_chapter == null) AppState.i.endReadingTheme();
   }
+
+  /// Brilho efetivo do tema exibido (considerando o atalho de leitura).
+  bool get _isDarkNow => effectiveThemeIndex(
+          AppState.i.displayedThemeIndex, AppState.i.systemBrightness) ==
+      1;
+
+  /// Alterna temporariamente entre claro e escuro no modo leitura.
+  void _toggleTheme() => AppState.i.toggleReadingTheme();
 
   // ------------------------------------------ navegação e posição de leitura
 
@@ -973,6 +983,14 @@ class _BibleTabState extends State<BibleTab> {
                 ),
               ),
               IconButton(
+                icon: Icon(
+                    _isDarkNow ? Icons.light_mode : Icons.dark_mode,
+                    color: Colors.white,
+                    size: 20),
+                tooltip: 'Alternar claro/escuro',
+                onPressed: _toggleTheme,
+              ),
+              IconButton(
                 icon: const Icon(Icons.chevron_right, color: Colors.white),
                 onPressed: hasNext
                     ? () {
@@ -1057,9 +1075,27 @@ class _BibleTabState extends State<BibleTab> {
                     _focusMode = false;
                     _immersive = false;
                   });
+                  AppState.i.endReadingTheme();
                   TtsService.i.stop();
                 },
                 child: const Icon(Icons.fullscreen_exit),
+              ),
+            ),
+          if (!_immersive && !_selMode)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 24,
+              child: Center(
+                child: FloatingActionButton.small(
+                  backgroundColor: t.card,
+                  foregroundColor: t.primary,
+                  heroTag: 'theme_focus',
+                  tooltip: 'Alternar claro/escuro',
+                  onPressed: _toggleTheme,
+                  child: Icon(
+                      _isDarkNow ? Icons.light_mode : Icons.dark_mode),
+                ),
               ),
             ),
           if (!_immersive && !_selMode)
@@ -1681,6 +1717,7 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
       _chapter = null;
       _focusVerse = null;
     });
+    AppState.i.endReadingTheme();
     final p = AppState.i.positionOf(code);
     if (p != null &&
         p.book >= 0 &&
