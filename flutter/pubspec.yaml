@@ -2,7 +2,7 @@ name: biblia_app
 description: "Bíblia & Hinário - leitura da Bíblia, hinário, músicas e boletim da igreja."
 publish_to: 'none'
 
-version: 5.0.3+23
+version: 5.0.4+24
 
 environment:
   sdk: ^3.13.3

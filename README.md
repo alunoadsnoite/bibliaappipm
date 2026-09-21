@@ -166,6 +166,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 5.0.1 | Músicas em **ordem alfabética** (ignorando acentos) com **busca** na aba; **busca dentro dos documentos** da Biblioteca (ex.: achar uma tese das 95 de Lutero ou uma pergunta do catecismo); grupo **Atos dos Apóstolos**; voz masculina menos robotizada; **correção da leitura do capítulo** (espera cada versículo terminar antes do próximo); referência lida por extenso (ex.: "Neemias, capítulo 8, versículo 15") |
 | 5.0.2 | **Destaque do versículo sendo lido** corrigido (antes marcava o versículo seguinte); **Oração Dominical (Pai Nosso)** e **As Cinco Solas da Reforma** na Biblioteca; modo leitura com **texto limpo em coluna centralizada** (oculta números, notas e destaques), **imersão total por toque** e **scroll contínuo entre capítulos/livros** |
 | 5.0.3 | **Seleção múltipla de versículos**: toque longo (ou menu → **Selecionar**) marca vários versículos para **copiar** (com ou sem referências), **compartilhar**, **anotar** e **destacar** de uma vez, com botão "selecionar tudo" e barra de ações; botão "texto limpo" removido do modo leitura |
+| 5.0.4 | **Leitura contínua também no modo normal**: deslizar à esquerda/direita troca de capítulo (cruzando livros) e, ao chegar ao fim do texto, o próximo capítulo entra automaticamente — como no modo leitura |
 
 ## Repositório
 

@@ -177,9 +177,9 @@ class _BibleTabState extends State<BibleTab> {
   @override
   void initState() {
     super.initState();
-    // Passa automaticamente para o próximo capítulo ao chegar ao fim, no
-    // modo leitura (scroll contínuo).
-    _chapterScroll.addListener(_onFocusScroll);
+    // Leitura contínua: passa ao próximo capítulo ao chegar ao fim do texto,
+    // tanto no modo normal quanto no modo leitura.
+    _chapterScroll.addListener(_onChapterScroll);
   }
 
   @override
@@ -256,9 +256,15 @@ class _BibleTabState extends State<BibleTab> {
       _chapter = chapter;
       _focusVerse = null;
       _pendingScroll = false;
+      _resetSelection();
     });
     AppState.i.savePosition(bookIndex, chapter);
     AppState.i.addRecent(bookIndex, chapter);
+  }
+
+  void _resetSelection() {
+    _selMode = false;
+    _sel.clear();
   }
 
   /// Próxima leitura (livro, capítulo) atravessando o fim do capítulo/livro.
@@ -284,15 +290,15 @@ class _BibleTabState extends State<BibleTab> {
       _chapter = chapter;
       _focusVerse = null;
       _pendingScroll = false;
+      _resetSelection();
     });
     AppState.i.savePosition(book, chapter);
     AppState.i.addRecent(book, chapter);
   }
 
-  /// Auto-avança para o próximo capítulo quando o leitor chega ao fim, no
-  /// modo foco. Volta o scroll ao topo do novo capítulo.
-  void _onFocusScroll() {
-    if (!_focusMode) return;
+  /// Auto-avança para o próximo capítulo quando o leitor chega ao fim do
+  /// texto, no modo normal e no modo leitura. Volta o scroll ao topo.
+  void _onChapterScroll() {
     final book = _bookIndex;
     final ch = _chapter;
     if (book == null || ch == null || _book == null) return;
@@ -303,6 +309,11 @@ class _BibleTabState extends State<BibleTab> {
     final next = _nextRef(book, ch);
     if (next == null) return;
     _goToRef(next.$1, next.$2);
+    _jumpTop();
+  }
+
+  /// Leva a lista de versículos para o topo após trocar de capítulo.
+  void _jumpTop() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_chapterScroll.hasClients) _chapterScroll.jumpTo(0);
     });
@@ -929,8 +940,12 @@ class _BibleTabState extends State<BibleTab> {
             children: [
               IconButton(
                 icon: const Icon(Icons.chevron_left, color: Colors.white),
-                onPressed:
-                    hasPrev ? () => _goToChapter(chapter - 1) : null,
+                onPressed: hasPrev
+                    ? () {
+                        _goToChapter(chapter - 1);
+                        _jumpTop();
+                      }
+                    : null,
                 disabledColor: Colors.white24,
               ),
               Expanded(
@@ -943,8 +958,12 @@ class _BibleTabState extends State<BibleTab> {
               ),
               IconButton(
                 icon: const Icon(Icons.chevron_right, color: Colors.white),
-                onPressed:
-                    hasNext ? () => _goToChapter(chapter + 1) : null,
+                onPressed: hasNext
+                    ? () {
+                        _goToChapter(chapter + 1);
+                        _jumpTop();
+                      }
+                    : null,
                 disabledColor: Colors.white24,
               ),
             ],
@@ -956,7 +975,23 @@ class _BibleTabState extends State<BibleTab> {
           itemCount: verses.length,
           onPlay: _playChapter,
         ),
-        Expanded(child: _verseList(verses, focusMode: false)),
+        Expanded(
+          child: GestureDetector(
+            onHorizontalDragEnd: (details) {
+              final v = details.primaryVelocity ?? 0;
+              final next = _nextRef(_bookIndex!, chapter);
+              final prev = _prevRef(_bookIndex!, chapter);
+              if (v < -200 && next != null) {
+                _goToRef(next.$1, next.$2);
+                _jumpTop();
+              } else if (v > 200 && prev != null) {
+                _goToRef(prev.$1, prev.$2);
+                _jumpTop();
+              }
+            },
+            child: _verseList(verses, focusMode: false),
+          ),
+        ),
       ],
     );
     return Stack(
@@ -983,8 +1018,10 @@ class _BibleTabState extends State<BibleTab> {
         final prev = _prevRef(_bookIndex!, chapter);
         if (v < -200 && next != null) {
           _goToRef(next.$1, next.$2);
+          _jumpTop();
         } else if (v > 200 && prev != null) {
           _goToRef(prev.$1, prev.$2);
+          _jumpTop();
         }
       },
       child: Stack(
@@ -1059,7 +1096,7 @@ class _BibleTabState extends State<BibleTab> {
       builder: (context, _) {
         final readingIndex = TtsService.i.index.value;
         return ListView.builder(
-          controller: focusMode ? _chapterScroll : null,
+          controller: _chapterScroll,
           padding: EdgeInsets.fromLTRB(
               focusMode ? 20 : 4, focusMode ? 28 : 4, focusMode ? 20 : 4, 80),
           itemCount: verses.length,
