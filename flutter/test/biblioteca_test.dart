@@ -10,11 +10,11 @@ void main() {
     await AppState.i.load();
   });
 
-  test('biblioteca com os oito documentos', () {
-    expect(AppState.i.biblioteca.length, 8);
+  test('biblioteca com os dez documentos', () {
+    expect(AppState.i.biblioteca.length, 10);
     expect(
       AppState.i.biblioteca.map((d) => d.id).toList(),
-      ['cfw', 'cm', 'cb', 'ca', 'cn', 'dm', '5p', 't95'],
+      ['cfw', 'cm', 'cb', 'ca', 'cn', 'dm', '5p', 't95', 'pn', '5s'],
     );
   });
 
@@ -27,6 +27,8 @@ void main() {
     expect(items('dm'), 1);
     expect(items('5p'), 6);
     expect(items('t95'), 96); // prefácio + 95 teses
+    expect(items('pn'), 3); // introdução + Mateus + Lucas
+    expect(items('5s'), 6); // introdução + as cinco solas
   });
 
   test('todo item tem conteúdo e parágrafos não vazios', () {

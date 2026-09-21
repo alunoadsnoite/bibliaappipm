@@ -17,6 +17,11 @@ abstract class TtsEngine {
   Future<void> speak(String text);
   Future<void> stop();
 
+  /// Faz com que [speak] só conclua quando a fala terminar de verdade.
+  /// Sem isso, speak retorna imediatamente e o próximo trecho interrompe
+  /// o anterior (lê-se apenas o fim de cada versículo).
+  Future<void> setAwaitSpeechCompletion(bool awaitCompletion);
+
   /// Vozes disponíveis (mapas com `name`, `locale` e opcional `gender`).
   Future<List<Map<String, String>>> voices();
 
@@ -48,6 +53,15 @@ class FlutterTtsEngine implements TtsEngine {
 
   @override
   Future<void> stop() => _tts.stop();
+
+  @override
+  Future<void> setAwaitSpeechCompletion(bool awaitCompletion) async {
+    try {
+      await _tts.awaitSpeakCompletion(awaitCompletion);
+    } catch (_) {
+      // Recurso opcional — em plataformas sem suporte, segue sem esperar.
+    }
+  }
 
   @override
   Future<List<Map<String, String>>> voices() async {
@@ -88,6 +102,9 @@ class FakeTtsEngine implements TtsEngine {
   String? selectedVoiceLocale;
   bool _available = true;
   bool _stopRequested = false;
+
+  /// Reflete a última chamada de [setAwaitSpeechCompletion].
+  bool awaitSpeechCompletion = false;
 
   /// Vozes usadas nos testes de seleção de voz.
   List<Map<String, String>> availableVoices = [
@@ -135,6 +152,11 @@ class FakeTtsEngine implements TtsEngine {
       await Future<void>.microtask(() {});
     }
     _stopRequested = false;
+  }
+
+  @override
+  Future<void> setAwaitSpeechCompletion(bool awaitCompletion) async {
+    awaitSpeechCompletion = awaitCompletion;
   }
 
   @override
@@ -204,6 +226,9 @@ class TtsService {
     if (!await _engine.isLanguageAvailable('pt-BR')) {
       await _engine.setLanguage('pt');
     }
+    // Garante que speak só encerre quando a fala terminar, para que o loop
+    // espere cada versículo antes de falar o próximo.
+    await _engine.setAwaitSpeechCompletion(true);
     try {
       _voices = await _engine.voices();
     } catch (_) {
@@ -221,19 +246,24 @@ class TtsService {
             (v['locale'] ?? '').toLowerCase().startsWith('pt'))
         .toList();
     for (final v in pt) {
-      if ((v['gender'] ?? '').toLowerCase() == gender) return v;
+      final g = (v['gender'] ?? '').toLowerCase();
+      if (g == gender) return v;
     }
-    final kw = gender == 'female' ? 'female' : 'male';
+    final kws = gender == 'female'
+        ? const ['female', 'femin', 'feminina', 'fem']
+        : const ['male', 'masc', 'masculin', 'masculina'];
     for (final v in pt) {
-      if ((v['name'] ?? '').toLowerCase().contains(kw)) return v;
+      final name = (v['name'] ?? '').toLowerCase();
+      if (kws.any((k) => name.contains(k))) return v;
     }
     return null;
   }
 
   /// Fatores de simulação de gênero quando não há voz instalada com o gênero
-  /// pedido: tom mais agudo para feminina, mais grave para masculina.
-  static const double kSimFemalePitch = 1.5;
-  static const double kSimMalePitch = 0.6;
+  /// pedido: tom um pouco mais agudo para feminina, um pouco mais grave para
+  /// masculina — valores suaves para não soar robotizado.
+  static const double kSimFemalePitch = 1.25;
+  static const double kSimMalePitch = 0.8;
 
   /// Aplica as preferências do usuário: velocidade, tom e voz
   /// (padrão/feminina/masculina). Quando não existir voz do gênero pedido

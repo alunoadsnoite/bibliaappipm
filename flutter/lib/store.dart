@@ -25,7 +25,7 @@ const Map<String, String> kVersionAssets = {
 };
 
 const String kAppName = 'Bíblia IPM';
-const String kAppVersion = '5.0.0';
+const String kAppVersion = '5.0.3';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;

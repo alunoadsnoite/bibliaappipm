@@ -26,6 +26,18 @@ const List<String> kHighlightNames = [
 
 AppTheme get appTheme => themeForIndex(AppState.i.themeIndex);
 
+/// Coloca o texto em minúsculas e remove os acentos, para ordenação e
+/// comparação que ignorem diacríticos (ex.: "Água" e "Agua" empatam).
+String foldSortKey(String s) {
+  const accents = 'áàâãäéèêëíìîïóòôõöúùûüç';
+  const plain = 'aaaaaeeeeiiiiooooouuuuc';
+  var r = s.toLowerCase();
+  for (var i = 0; i < accents.length; i++) {
+    r = r.replaceAll(accents[i], plain[i]);
+  }
+  return r;
+}
+
 Color highlightColor(String key) {
   final i = AppState.i.getHighlight(key);
   if (i >= 0 && i < kHighlightColors.length) return kHighlightColors[i];
@@ -52,6 +64,8 @@ Future<void> showLineMenu(
   String? note,
   ValueChanged<String>? onNoteChanged,
   VoidCallback? onCompare,
+  String? speakText,
+  VoidCallback? onSelect,
 }) async {
   final t = appTheme;
   final current = AppState.i.getHighlight(highlightKey);
@@ -78,6 +92,16 @@ Future<void> showLineMenu(
                     color: t.text, fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
+            if (onSelect != null)
+              ListTile(
+                leading: Icon(Icons.checklist, color: t.text),
+                title: Text('Selecionar (copiar/nota/destaque em vários)',
+                    style: TextStyle(color: t.text)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onSelect();
+                },
+              ),
             if (onCompare != null)
               ListTile(
                 leading: Icon(Icons.compare_arrows, color: t.text),
@@ -92,7 +116,7 @@ Future<void> showLineMenu(
               leading: Icon(Icons.volume_up, color: t.text),
               title: Text('Ouvir', style: TextStyle(color: t.text)),
               onTap: () {
-                TtsService.i.speakOne(text);
+                TtsService.i.speakOne(speakText ?? text);
                 Navigator.pop(ctx);
               },
             ),
@@ -186,16 +210,25 @@ Future<void> showLineMenu(
   );
 }
 
-/// Abre o diálogo de anotação de um versículo/linha. Retorna o novo texto
-/// salvo, ou `null` se cancelado.
+/// Abre o diálogo de anotação e usa o texto salvo em `setNote`. Retorna o
+/// novo texto salvo, ou `null` se cancelado.
 Future<String?> _editNote(
   BuildContext context,
   String key,
   String initial,
 ) async {
+  final saved = await editNoteDialog(context, initial);
+  if (saved == null) return null;
+  await AppState.i.setNote(key, saved);
+  return saved;
+}
+
+/// Abre o diálogo de anotação (apenas) e devolve o texto digitado, ou `null`
+/// se cancelado. Não salva — quem chama decide onde gravar.
+Future<String?> editNoteDialog(BuildContext context, [String initial = '']) async {
   final t = appTheme;
   final ctrl = TextEditingController(text: initial);
-  final saved = await showDialog<String>(
+  return showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: t.card,
@@ -221,7 +254,4 @@ Future<String?> _editNote(
       ],
     ),
   );
-  if (saved == null) return null;
-  await AppState.i.setNote(key, saved);
-  return saved;
 }

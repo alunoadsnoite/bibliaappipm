@@ -199,12 +199,12 @@ class _HymnsTabState extends State<HymnsTab> {
 
   void _playHymn() {
     final h = _current!;
+    final intro = 'Hino ${h.num}: ${h.title}. ';
     final queue = <String>[
-      'Hino ${h.num}: ${h.title}.',
-      for (var s = 0; s < h.stanzas.length; s++) ...[
-        '${_stanzaLabel(h.stanzaNames[s]).isEmpty ? 'Estrofe ${s + 1}' : _stanzaLabel(h.stanzaNames[s])}. '
+      for (var s = 0; s < h.stanzas.length; s++)
+        '${s == 0 ? intro : ''}'
+            '${_stanzaLabel(h.stanzaNames[s]).isEmpty ? 'Estrofe ${s + 1}' : _stanzaLabel(h.stanzaNames[s])}. '
             '${h.stanzas[s].join('. ')}',
-      ],
     ];
     TtsService.i.playChapter(queue);
   }

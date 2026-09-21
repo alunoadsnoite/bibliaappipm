@@ -15,12 +15,15 @@ class LibraryTab extends StatefulWidget {
 
 class _LibraryTabState extends State<LibraryTab> {
   final TextEditingController _search = TextEditingController();
+  final TextEditingController _docSearch = TextEditingController();
   String _query = '';
+  String _docQuery = '';
   BibliotecaText? _current;
 
   @override
   void dispose() {
     _search.dispose();
+    _docSearch.dispose();
     super.dispose();
   }
 
@@ -30,6 +33,14 @@ class _LibraryTabState extends State<LibraryTab> {
     return AppState.i.biblioteca
         .where((d) => d.searchText().contains(q))
         .toList();
+  }
+
+  /// Verifica se um item de documento contém a busca atual (título ou
+  /// parágrafos).
+  bool _docItemMatches(BibliotecaItem it, String q) {
+    if (q.isEmpty) return true;
+    return it.t.toLowerCase().contains(q) ||
+        it.p.any((p) => p.toLowerCase().contains(q));
   }
 
   @override
@@ -51,7 +62,11 @@ class _LibraryTabState extends State<LibraryTab> {
                           size: 20, color: t.primary),
                       onPressed: () {
                         TtsService.i.stop();
-                        setState(() => _current = null);
+                        _docSearch.clear();
+                        setState(() {
+                          _current = null;
+                          _docQuery = '';
+                        });
                       },
                     ),
                   Expanded(
@@ -122,7 +137,13 @@ class _LibraryTabState extends State<LibraryTab> {
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: ListTile(
             leading: Icon(Icons.auto_stories, color: t.primary),
-            onTap: () => setState(() => _current = d),
+            onTap: () {
+              _docSearch.clear();
+              setState(() {
+                _current = d;
+                _docQuery = '';
+              });
+            },
             title: Text(d.title,
                 style: TextStyle(
                     color: t.text,
@@ -142,6 +163,10 @@ class _LibraryTabState extends State<LibraryTab> {
 
   Widget _detail(BibliotecaText d) {
     final t = appTheme;
+    final q = _docQuery.trim().toLowerCase();
+    final matching = q.isEmpty
+        ? d.items.length
+        : d.items.where((it) => _docItemMatches(it, q)).length;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
@@ -151,6 +176,45 @@ class _LibraryTabState extends State<LibraryTab> {
           itemCount: d.items.length,
           onPlay: () => _playDoc(d),
         ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _docSearch,
+          onChanged: (v) => setState(() => _docQuery = v),
+          style: TextStyle(color: t.text, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Buscar neste documento',
+            hintStyle: TextStyle(color: t.muted, fontSize: 14),
+            isDense: true,
+            filled: true,
+            fillColor: t.light,
+            prefixIcon: Icon(Icons.search, size: 20, color: t.muted),
+            suffixIcon: _docQuery.trim().isEmpty
+                ? null
+                : IconButton(
+                    icon: Icon(Icons.close, size: 18, color: t.muted),
+                    onPressed: () {
+                      _docSearch.clear();
+                      setState(() => _docQuery = '');
+                    },
+                  ),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        if (q.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              matching == 1
+                  ? '1 item de ${d.items.length}'
+                  : '$matching itens de ${d.items.length}',
+              style: TextStyle(color: t.muted, fontSize: 12),
+            ),
+          ),
         const SizedBox(height: 8),
         Text(
           d.title,
@@ -165,37 +229,51 @@ class _LibraryTabState extends State<LibraryTab> {
               style: TextStyle(color: t.muted, fontSize: 13)),
         ],
         const SizedBox(height: 12),
+        if (q.isNotEmpty && matching == 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text('Nenhum item encontrado para "${_docQuery.trim()}"',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.muted, fontSize: 14)),
+          ),
         for (var i = 0; i < d.items.length; i++) ...[
-          if (d.items[i].t.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 14, bottom: 2),
-              child: Text(d.items[i].t,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: t.accent,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold)),
-            )
-          else
-            const SizedBox(height: 14),
-          for (var j = 0; j < d.items[i].p.length; j++)
-            _line(
-              text: d.items[i].p[j],
-              key: 'b:${d.id}:$i:$j',
-            ),
+          if (_docItemMatches(d.items[i], q)) ...[
+            if (d.items[i].t.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 14, bottom: 2),
+                child: Text(d.items[i].t,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: t.accent,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold)),
+              )
+            else
+              const SizedBox(height: 14),
+            for (var j = 0; j < d.items[i].p.length; j++)
+              _line(
+                text: d.items[i].p[j],
+                key: 'b:${d.id}:$i:$j',
+              ),
+          ],
         ],
       ],
     );
   }
 
   void _playDoc(BibliotecaText d) {
-    final queue = <String>[
-      d.title,
-      for (final it in d.items) ...[
-        if (it.t.isNotEmpty) it.t,
-        for (final p in it.p) p,
-      ],
-    ];
+    var first = true;
+    final queue = <String>[];
+    for (final it in d.items) {
+      if (it.t.isNotEmpty) {
+        queue.add(first ? '${d.title}. ${it.t}' : it.t);
+        first = false;
+      }
+      for (final p in it.p) {
+        queue.add(first ? '${d.title}. $p' : p);
+        first = false;
+      }
+    }
     TtsService.i.playChapter(queue);
   }
 

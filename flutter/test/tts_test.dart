@@ -212,6 +212,18 @@ void main() {
       expect(engine.selectedVoiceName, 'pt-BR-male');
     });
 
+    test('adivinha o gênero pelo nome quando o campo gender falta', () async {
+      AppState.i.ttsVoice = 'male';
+      final engine = FakeTtsEngine()
+        ..availableVoices = [
+          {'name': 'voz-masculina-pt', 'locale': 'pt-BR'},
+          {'name': 'voz-feminina-pt', 'locale': 'pt-BR'},
+        ];
+      final svc = TtsService.createForTest(fake: engine);
+      await svc.speakOne('teste');
+      expect(engine.selectedVoiceName, 'voz-masculina-pt');
+    });
+
     test('não seleciona voz quando não há nenhuma em português', () async {
       AppState.i.ttsVoice = 'female';
       final engine = FakeTtsEngine()
@@ -233,7 +245,7 @@ void main() {
       final svc = TtsService.createForTest(fake: engine);
       await svc.speakOne('teste');
       expect(engine.selectedVoiceName, isNull);
-      expect(engine.pitches, [1.5]); // agudo (feminina)
+      expect(engine.pitches, [1.25]); // agudo (feminina)
     });
 
     test('sem voz masculina instalada, o tom simula o gênero', () async {
@@ -246,7 +258,7 @@ void main() {
       final svc = TtsService.createForTest(fake: engine);
       await svc.speakOne('teste');
       expect(engine.selectedVoiceName, isNull);
-      expect(engine.pitches, [0.6]); // grave (masculina)
+      expect(engine.pitches, [0.8]); // grave (masculina)
     });
 
     test('com voz instalada, usa a voz real e mantém o tom do usuário',

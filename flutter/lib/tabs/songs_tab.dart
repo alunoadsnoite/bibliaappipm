@@ -14,7 +14,30 @@ class SongsTab extends StatefulWidget {
 }
 
 class _SongsTabState extends State<SongsTab> {
-  int? _current;
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+  Song? _current;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// Músicas em ordem alfabética (pelo título, ignorando acentos), já
+  /// filtradas pela busca.
+  List<Song> get _filtered {
+    final songs = List.of(AppState.i.songs)
+      ..sort((a, b) =>
+          foldSortKey(a.title).compareTo(foldSortKey(b.title)));
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return songs;
+    return songs
+        .where((s) =>
+            s.title.toLowerCase().contains(q) ||
+            s.lyrics.toLowerCase().contains(q))
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +65,7 @@ class _SongsTabState extends State<SongsTab> {
                     child: Text(
                       _current == null
                           ? 'Músicas'
-                          : AppState.i.songs[_current!].title,
+                          : _current!.title,
                       style: TextStyle(
                           color: t.text,
                           fontSize: 18,
@@ -50,6 +73,28 @@ class _SongsTabState extends State<SongsTab> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (_current == null)
+                    SizedBox(
+                      width: 140,
+                      child: TextField(
+                        controller: _search,
+                        onChanged: (v) => setState(() => _query = v),
+                        style: TextStyle(color: t.text, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Buscar música',
+                          hintStyle: TextStyle(color: t.muted, fontSize: 14),
+                          isDense: true,
+                          filled: true,
+                          fillColor: t.light,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
                   TextButton.icon(
                     onPressed: () => _edit(_current),
                     icon: Icon(
@@ -76,13 +121,15 @@ class _SongsTabState extends State<SongsTab> {
 
   Widget _list() {
     final t = appTheme;
-    final songs = AppState.i.songs;
+    final songs = _filtered;
     if (songs.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'Nenhuma música adicionada.\nToque em "Adicionar" para incluir letras.',
+            _query.trim().isEmpty
+                ? 'Nenhuma música adicionada.\nToque em "Adicionar" para incluir letras.'
+                : 'Nenhuma música encontrada.',
             textAlign: TextAlign.center,
             style: TextStyle(color: t.muted, fontSize: 14),
           ),
@@ -105,8 +152,8 @@ class _SongsTabState extends State<SongsTab> {
           elevation: 0,
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: ListTile(
-            onTap: () => setState(() => _current = i),
-            onLongPress: () => _itemMenu(i),
+            onTap: () => setState(() => _current = s),
+            onLongPress: () => _itemMenu(s),
             title: Text(s.title,
                 style: TextStyle(
                     color: t.text,
@@ -120,9 +167,8 @@ class _SongsTabState extends State<SongsTab> {
     );
   }
 
-  Widget _detail(int index) {
+  Widget _detail(Song s) {
     final t = appTheme;
-    final s = AppState.i.songs[index];
     final lines = s.lyrics.split('\n');
     final stanzas = _songStanzas(s.lyrics);
     return ListView(
@@ -132,7 +178,7 @@ class _SongsTabState extends State<SongsTab> {
           positionLabel: 'Estrofe',
           playLabel: 'Ouvir a música completa',
           itemCount: stanzas.length,
-          onPlay: () => _playSong(index),
+          onPlay: () => _playSong(s),
         ),
         const SizedBox(height: 8),
         Text(
@@ -148,7 +194,7 @@ class _SongsTabState extends State<SongsTab> {
           else
             _line(
               text: lines[li],
-              key: 's:$index:$li',
+              key: 's:${AppState.i.songs.indexOf(s)}:$li',
             ),
       ],
     );
@@ -171,13 +217,12 @@ class _SongsTabState extends State<SongsTab> {
     return [for (final g in groups) g.join('. ')];
   }
 
-  void _playSong(int index) {
-    final s = AppState.i.songs[index];
+  void _playSong(Song s) {
     final stanzas = _songStanzas(s.lyrics);
+    final intro = s.title.trim().isEmpty ? '' : '${s.title.trim()}. ';
     final queue = <String>[
-      if (s.title.trim().isNotEmpty) '${s.title.trim()}.',
       for (var i = 0; i < stanzas.length; i++)
-        'Estrofe ${i + 1}. ${stanzas[i]}',
+        '${i == 0 ? intro : ''}Estrofe ${i + 1}. ${stanzas[i]}',
     ];
     TtsService.i.playChapter(queue);
   }
@@ -207,19 +252,19 @@ class _SongsTabState extends State<SongsTab> {
     );
   }
 
-  Future<void> _edit(int? index) async {
+  Future<void> _edit(Song? song) async {
     final t = appTheme;
     final titleCtrl = TextEditingController();
     final lyricsCtrl = TextEditingController();
-    if (index != null) {
-      titleCtrl.text = AppState.i.songs[index].title;
-      lyricsCtrl.text = AppState.i.songs[index].lyrics;
+    if (song != null) {
+      titleCtrl.text = song.title;
+      lyricsCtrl.text = song.lyrics;
     }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.card,
-        title: Text(index == null ? 'Nova música' : 'Editar música',
+        title: Text(song == null ? 'Nova música' : 'Editar música',
             style: TextStyle(color: t.text)),
         content: SingleChildScrollView(
           child: Column(
@@ -257,19 +302,18 @@ class _SongsTabState extends State<SongsTab> {
     final title = titleCtrl.text.trim();
     final lyrics = lyricsCtrl.text.trim();
     if (title.isEmpty || lyrics.isEmpty) return;
-    if (index == null) {
+    if (song == null) {
       AppState.i.songs.add(Song(title, lyrics));
     } else {
-      AppState.i.songs[index].title = title;
-      AppState.i.songs[index].lyrics = lyrics;
+      song.title = title;
+      song.lyrics = lyrics;
     }
     await AppState.i.saveSongs();
-    if (mounted) setState(() => _current = index);
+    if (mounted) setState(() => _current = song);
   }
 
-  Future<void> _itemMenu(int index) async {
+  Future<void> _itemMenu(Song s) async {
     final t = appTheme;
-    final s = AppState.i.songs[index];
     final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: t.card,
@@ -297,9 +341,9 @@ class _SongsTabState extends State<SongsTab> {
       ),
     );
     if (action == 'edit') {
-      await _edit(index);
+      await _edit(s);
     } else if (action == 'delete') {
-      AppState.i.songs.removeAt(index);
+      AppState.i.songs.remove(s);
       await AppState.i.saveSongs();
       if (mounted) setState(() => _current = null);
     } else if (action == 'share') {

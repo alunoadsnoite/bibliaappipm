@@ -43,7 +43,7 @@ const List<_Group> _kGroups = [
     27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
   ]),
   _Group('Evangelhos', [39, 40, 41, 42]),
-  _Group('Atos', [43]),
+  _Group('Atos dos Apóstolos', [43]),
   _Group('Cartas Paulinas', [
     44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
   ]),
@@ -163,6 +163,9 @@ class _BibleTabState extends State<BibleTab> {
   int? _focusVerse;
   bool _pendingScroll = false;
   bool _focusMode = false;
+  bool _immersive = false;
+  bool _selMode = false;
+  final Set<int> _sel = {};
   bool _loadingVersion = false;
 
   List<List<int>>? _results;
@@ -170,6 +173,14 @@ class _BibleTabState extends State<BibleTab> {
   bool _searching = false;
   bool _searchBookOnly = false;
   int _job = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Passa automaticamente para o próximo capítulo ao chegar ao fim, no
+    // modo leitura (scroll contínuo).
+    _chapterScroll.addListener(_onFocusScroll);
+  }
 
   @override
   void dispose() {
@@ -201,10 +212,19 @@ class _BibleTabState extends State<BibleTab> {
   bool get _hasResultsMore => _visible < (_results?.length ?? 0);
 
   void _back() {
+    if (_selMode) {
+      setState(() {
+        _selMode = false;
+        _sel.clear();
+        _immersive = false;
+      });
+      return;
+    }
     if (_chapter != null || _results != null) TtsService.i.stop();
     setState(() {
       _search.clear();
       _focusMode = false;
+      _immersive = false;
       if (_results != null) {
         _results = null;
       } else if (_chapter != null) {
@@ -239,6 +259,53 @@ class _BibleTabState extends State<BibleTab> {
     });
     AppState.i.savePosition(bookIndex, chapter);
     AppState.i.addRecent(bookIndex, chapter);
+  }
+
+  /// Próxima leitura (livro, capítulo) atravessando o fim do capítulo/livro.
+  (int, int)? _nextRef(int book, int chapter) {
+    final bible = AppState.i.bible;
+    if (book >= bible.length) return null;
+    if (chapter + 1 < bible[book].chapters.length) return (book, chapter + 1);
+    if (book + 1 < bible.length) return (book + 1, 0);
+    return null;
+  }
+
+  /// Leitura anterior, atravessando o início do capítulo/livro.
+  (int, int)? _prevRef(int book, int chapter) {
+    final bible = AppState.i.bible;
+    if (chapter > 0) return (book, chapter - 1);
+    if (book > 0) return (book - 1, bible[book - 1].chapters.length - 1);
+    return null;
+  }
+
+  void _goToRef(int book, int chapter) {
+    setState(() {
+      _bookIndex = book;
+      _chapter = chapter;
+      _focusVerse = null;
+      _pendingScroll = false;
+    });
+    AppState.i.savePosition(book, chapter);
+    AppState.i.addRecent(book, chapter);
+  }
+
+  /// Auto-avança para o próximo capítulo quando o leitor chega ao fim, no
+  /// modo foco. Volta o scroll ao topo do novo capítulo.
+  void _onFocusScroll() {
+    if (!_focusMode) return;
+    final book = _bookIndex;
+    final ch = _chapter;
+    if (book == null || ch == null || _book == null) return;
+    if (!_chapterScroll.hasClients) return;
+    final pos = _chapterScroll.position;
+    if (pos.maxScrollExtent <= 0) return;
+    if (pos.pixels <= 0 || pos.extentAfter > 100) return;
+    final next = _nextRef(book, ch);
+    if (next == null) return;
+    _goToRef(next.$1, next.$2);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chapterScroll.hasClients) _chapterScroll.jumpTo(0);
+    });
   }
 
   void _openVerse(int book, int chapter, int verse) {
@@ -854,7 +921,7 @@ class _BibleTabState extends State<BibleTab> {
     final verses = b.chapters[chapter];
     final hasPrev = chapter > 0;
     final hasNext = chapter + 1 < b.chapters.length;
-    return Column(
+    final view = Column(
       children: [
         Material(
           color: t.primaryDark,
@@ -892,6 +959,12 @@ class _BibleTabState extends State<BibleTab> {
         Expanded(child: _verseList(verses, focusMode: false)),
       ],
     );
+    return Stack(
+      children: [
+        view,
+        if (_selMode) _selectionBar(),
+      ],
+    );
   }
 
   Widget _focusView() {
@@ -899,32 +972,82 @@ class _BibleTabState extends State<BibleTab> {
     final b = _book!;
     final chapter = _chapter!;
     final verses = b.chapters[chapter];
-    final hasPrev = chapter > 0;
-    final hasNext = chapter + 1 < b.chapters.length;
     return GestureDetector(
+      onTap: () {
+        if (_selMode) return;
+        setState(() => _immersive = !_immersive);
+      },
       onHorizontalDragEnd: (details) {
         final v = details.primaryVelocity ?? 0;
-        if (v < -200 && hasNext) {
-          _goToChapter(chapter + 1);
-        } else if (v > 200 && hasPrev) {
-          _goToChapter(chapter - 1);
+        final next = _nextRef(_bookIndex!, chapter);
+        final prev = _prevRef(_bookIndex!, chapter);
+        if (v < -200 && next != null) {
+          _goToRef(next.$1, next.$2);
+        } else if (v > 200 && prev != null) {
+          _goToRef(prev.$1, prev.$2);
         }
       },
       child: Stack(
         children: [
           _verseList(verses, focusMode: true),
-          Positioned(
-            right: 16,
-            bottom: 24,
-            child: FloatingActionButton.small(
-              backgroundColor: t.card,
-              foregroundColor: t.primary,
-              heroTag: 'exit_focus',
-              tooltip: 'Sair do modo leitura',
-              onPressed: () => setState(() => _focusMode = false),
-              child: const Icon(Icons.fullscreen_exit),
+          if (!_immersive && !_selMode)
+            Positioned(
+              right: 16,
+              bottom: 24,
+              child: FloatingActionButton.small(
+                backgroundColor: t.card,
+                foregroundColor: t.primary,
+                heroTag: 'exit_focus',
+                tooltip: 'Sair do modo leitura',
+                onPressed: () {
+                  setState(() {
+                    _focusMode = false;
+                    _immersive = false;
+                  });
+                  TtsService.i.stop();
+                },
+                child: const Icon(Icons.fullscreen_exit),
+              ),
             ),
-          ),
+          if (!_immersive && !_selMode)
+            Positioned(
+              left: 16,
+              bottom: 24,
+              child: FloatingActionButton.small(
+                backgroundColor: t.card,
+                foregroundColor: t.primary,
+                heroTag: 'select_focus',
+                tooltip: 'Selecionar versículos',
+                onPressed: _selMode
+                    ? () {
+                        setState(() {
+                          _selMode = false;
+                          _sel.clear();
+                        });
+                      }
+                    : () {
+                        setState(() => _selMode = true);
+                      },
+                child: const Icon(Icons.checklist),
+              ),
+            ),
+          if (_immersive)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 12,
+              child: IgnorePointer(
+                child: Text(
+                  'Toque para exibir os botões',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          if (_selMode) _selectionBar(),
         ],
       ),
     );
@@ -941,7 +1064,8 @@ class _BibleTabState extends State<BibleTab> {
               focusMode ? 20 : 4, focusMode ? 28 : 4, focusMode ? 20 : 4, 80),
           itemCount: verses.length,
           itemBuilder: (context, v) {
-            final row = _verseRow(verses, v, readingIndex, focusMode);
+            final row = _verseRow(verses, v, readingIndex, focusMode,
+                immersive: focusMode && _immersive);
             if (focusMode || !_pendingScroll || _focusVerse != v) return row;
             final targetCtx = context;
             return Builder(
@@ -968,8 +1092,8 @@ class _BibleTabState extends State<BibleTab> {
     );
   }
 
-  Widget _verseRow(List<String> verses, int v, int? readingIndex,
-      bool focusMode) {
+Widget _verseRow(List<String> verses, int v, int? readingIndex,
+    bool focusMode, {bool immersive = false}) {
     final t = appTheme;
     final b = _book!;
     final chapter = _chapter!;
@@ -978,13 +1102,24 @@ class _BibleTabState extends State<BibleTab> {
     final reading = readingIndex == v;
     final note = AppState.i.getNote(key) ?? '';
     final hasNote = note.trim().isNotEmpty;
+    final selected = _selMode && _sel.contains(v);
     return GestureDetector(
-      onTap: () => _verseMenu(verses, v),
-      onLongPress: () => _verseMenu(verses, v),
+      onTap: immersive
+          ? null
+          : (_selMode
+              ? () => _toggleSelect(v)
+              : () => _verseMenu(verses, v)),
+      onLongPress: immersive
+          ? null
+          : (_selMode
+              ? () => _toggleSelect(v)
+              : () => _enterSelect(v)),
       child: Container(
-        color: reading
-            ? t.accent.withValues(alpha: 0.16)
-            : highlightColor(key),
+        color: selected
+            ? t.primary.withValues(alpha: 0.14)
+            : (reading
+                ? t.accent.withValues(alpha: 0.16)
+                : highlightColor(key)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1030,7 +1165,16 @@ class _BibleTabState extends State<BibleTab> {
                 ],
               ),
             ),
-            if (reading)
+            if (_selMode)
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 8),
+                child: Icon(selected
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                    color: selected ? t.primary : t.muted,
+                    size: 20),
+              )
+            else if (reading && !immersive)
               Padding(
                 padding: const EdgeInsets.only(top: 6, left: 4),
                 child: Icon(Icons.volume_up,
@@ -1042,12 +1186,282 @@ class _BibleTabState extends State<BibleTab> {
     );
   }
 
+  // ----------------------------------------------------------- seleção múltipla
+
+  String _selKey(int v) => 'v:${_bookIndex!}:${_chapter! + 1}:${v + 1}';
+
+  List<(int, String)> get _selItems {
+    final b = _book!;
+    final vs = b.chapters[_chapter!];
+    final sorted = _sel.toList()..sort();
+    return [for (final v in sorted) (v, vs[v])];
+  }
+
+  /// Texto dos versículos selecionados, na ordem do capítulo.
+  String _selFormatted({required bool withRefs}) {
+    final b = _book!;
+    final ch = _chapter!;
+    final sb = StringBuffer();
+    for (final (v, txt) in _selItems) {
+      if (withRefs) {
+        if (sb.isNotEmpty) sb.write('\n');
+        sb.write('${b.abbr} ${ch + 1}:${v + 1}  $txt');
+      } else {
+        sb.write(txt);
+        sb.write(' ');
+      }
+    }
+    return sb.toString().trim();
+  }
+
+  void _enterSelect(int v) {
+    setState(() {
+      _selMode = true;
+      _immersive = false;
+      _sel
+        ..clear()
+        ..add(v);
+    });
+  }
+
+  void _toggleSelect(int v) {
+    setState(() {
+      if (_sel.contains(v)) {
+        _sel.remove(v);
+        if (_sel.isEmpty) _selMode = false;
+      } else {
+        _sel.add(v);
+      }
+    });
+  }
+
+  void _selectAll() {
+    final n = _book!.chapters[_chapter!].length;
+    setState(() {
+      _selMode = true;
+      _sel
+        ..clear()
+        ..addAll(List.generate(n, (i) => i));
+    });
+  }
+
+  void _leaveSelect() {
+    setState(() {
+      _selMode = false;
+      _sel.clear();
+    });
+  }
+
+  /// Pergunta se a cópia/compartilhamento deve incluir as referências.
+  Future<bool?> _askRefs(String title) {
+    final t = appTheme;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: t.card,
+        title: Text(title, style: TextStyle(color: t.text)),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Com referências', style: TextStyle(color: t.text)),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Somente o texto', style: TextStyle(color: t.text)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copySel() async {
+    final withRefs = await _askRefs('Copiar versículos');
+    if (withRefs == null) return;
+    await copyText(_selFormatted(withRefs: withRefs));
+    _leaveSelect();
+  }
+
+  Future<void> _shareSel() async {
+    final withRefs = await _askRefs('Compartilhar versículos');
+    if (withRefs == null) return;
+    await shareText(_selFormatted(withRefs: withRefs));
+    _leaveSelect();
+  }
+
+  Future<void> _noteSel() async {
+    final notes = [for (final (v, _) in _selItems) AppState.i.getNote(_selKey(v)) ?? ''];
+    final common = notes.isNotEmpty && notes.every((s) => s == notes.first)
+        ? notes.first
+        : '';
+    final edited = await editNoteDialog(context, common);
+    if (edited == null) return;
+    for (final (v, _) in _selItems) {
+      await AppState.i.setNote(_selKey(v), edited);
+    }
+    _leaveSelect();
+  }
+
+  Future<void> _highlightSel() async {
+    final t = appTheme;
+    final ch = _chapter!;
+    final firstH = AppState.i.getHighlight(_selKey(_sel.first));
+    final same = _sel.every((v) => AppState.i.getHighlight(_selKey(v)) == firstH);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: t.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final current = same ? firstH : -1;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Destaque ${_sel.length} versículo(s) — capítulo ${ch + 1}',
+                    style: TextStyle(
+                        color: t.text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (var i = 0; i < kHighlightColors.length; i++)
+                      GestureDetector(
+                        onTap: () async {
+                          for (final v in _selItems) {
+                            await AppState.i.setHighlight(_selKey(v.$1), i);
+                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          _leaveSelect();
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: kHighlightColors[i],
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
+                                  current == i ? t.primary : Colors.black12,
+                              width: current == i ? 3 : 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    GestureDetector(
+                      onTap: () async {
+                        for (final v in _selItems) {
+                          await AppState.i.setHighlight(_selKey(v.$1), -1);
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _leaveSelect();
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: t.light,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black12),
+                        ),
+                        child: Icon(Icons.format_color_reset,
+                            size: 20, color: t.muted),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Barra de ações da seleção múltipla (sobrepostas ao rodapé).
+  Widget _selectionBar() {
+    final t = appTheme;
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Material(
+        color: t.card,
+        elevation: 8,
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.close, color: t.text, size: 20),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _leaveSelect,
+                ),
+                Text('${_sel.length} selec.',
+                    style: TextStyle(color: t.text, fontSize: 13)),
+                const SizedBox(width: 6),
+                IconButton(
+                  icon: const Icon(Icons.select_all, size: 20),
+                  color: t.text,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Selecionar tudo',
+                  onPressed: _selectAll,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.format_paint, size: 20),
+                  color: t.primary,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Destacar',
+                  onPressed: _highlightSel,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.sticky_note_2, size: 20),
+                  color: t.text,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Anotar',
+                  onPressed: _noteSel,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 20),
+                  color: t.text,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Copiar',
+                  onPressed: _copySel,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.share, size: 20),
+                  color: t.text,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Compartilhar',
+                  onPressed: _shareSel,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Abre o menu do versículo (toque ou toque longo).
   Future<void> _verseMenu(List<String> verses, int v) {
     final b = _book!;
     final chapter = _chapter!;
     final ref = '${b.abbr} ${chapter + 1}:${v + 1}';
     final key = 'v:${_bookIndex!}:${chapter + 1}:${v + 1}';
+    // Referência falada: nome completo e "capítulo/versículo" por extenso,
+    // para o TTS não ler "8:15" como horário ("oito e quinze da manhã").
+    final spoken = '${b.name}, capítulo ${chapter + 1}, '
+        'versículo ${v + 1}. ${verses[v]}';
     return showLineMenu(
       context,
       title: ref,
@@ -1056,20 +1470,24 @@ class _BibleTabState extends State<BibleTab> {
       note: AppState.i.getNote(key) ?? '',
       onHighlightChanged: (_) => setState(() {}),
       onNoteChanged: (_) => setState(() {}),
+      speakText: spoken,
       onCompare: () =>
           _showComparison(bAbbr: b.abbr, book: _bookIndex!, chapter: chapter, verse: v),
+      onSelect: () => _enterSelect(v),
     );
   }
 
   void _playChapter() {
-    final verses = _book!.chapters[_chapter!];
+    final b = _book!;
+    final chapter = _chapter!;
+    final verses = b.chapters[chapter];
+    final intro = '${b.name}, capítulo ${chapter + 1}. ';
     final queue = [
-      '${_book!.name}, capítulo ${_chapter! + 1}.',
       for (var v = 0; v < verses.length; v++)
-        'Versículo ${v + 1}. ${verses[v]}',
+        '${v == 0 ? intro : ''}Versículo ${v + 1}. ${verses[v]}',
     ];
     TtsService.i.playChapter(queue);
-    AppState.i.markChapterRead(_bookIndex!, _chapter!);
+    AppState.i.markChapterRead(_bookIndex!, chapter);
   }
 
   // -------------------------------------------------------------- resultados
@@ -1197,6 +1615,9 @@ class _BibleTabState extends State<BibleTab> {
       _results = null;
       _searching = false;
       _focusMode = false;
+      _immersive = false;
+      _selMode = false;
+      _sel.clear();
       _bookIndex = null;
       _chapter = null;
       _focusVerse = null;
