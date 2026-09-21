@@ -211,6 +211,34 @@ void main() {
     });
   });
 
+  group('letras vermelhas', () {
+    test('dataset carrega com capítulos e versículos', () {
+      expect(AppState.i.redLetter, isNotEmpty);
+      final joao = AppState.i.redLetter['43'];
+      expect(joao, isNotNull);
+      expect(joao!['3'], contains(16));
+    });
+
+    test('isRedLetter reconhece fala de Jesus e de Deus', () {
+      expect(AppState.i.isRedLetter(42, 2, 15), isTrue);
+      expect(AppState.i.isRedLetter(0, 2, 14), isTrue);
+      expect(AppState.i.isRedLetter(0, 2, 0), isFalse);
+    });
+
+    test('versículo sem fala divina não é vermelho', () {
+      expect(AppState.i.isRedLetter(42, 3, 0), isFalse);
+      expect(AppState.i.isRedLetter(18, 0, 0), isFalse);
+    });
+
+    test('setRedLetterEnabled liga, persiste e notifica', () async {
+      AppState.i.setRedLetterEnabled(true);
+      expect(AppState.i.redLetterEnabled, isTrue);
+      expect(AppState.i.prefs.getBool('red_letter_enabled'), isTrue);
+      AppState.i.setRedLetterEnabled(false);
+      expect(AppState.i.redLetterEnabled, isFalse);
+    });
+  });
+
   group('versão do app', () {
     test('kAppVersion corresponde ao pubspec', () {
       final pub = File('pubspec.yaml').readAsStringSync();

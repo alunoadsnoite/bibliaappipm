@@ -11,6 +11,7 @@ class AppTheme {
   final Color accentDark;
   final Color light;
   final Color tabSelected;
+  final Color redText;
 
   const AppTheme({
     required this.bg,
@@ -23,6 +24,7 @@ class AppTheme {
     required this.accentDark,
     required this.light,
     required this.tabSelected,
+    required this.redText,
   });
 }
 
@@ -37,6 +39,7 @@ const AppTheme kClaro = AppTheme(
   accentDark: Color(0xFFB45309),
   light: Color(0xFFEEF2F6),
   tabSelected: Color(0xFF1F5E93),
+  redText: Color(0xFFC62828),
 );
 
 const AppTheme kEscuro = AppTheme(
@@ -50,6 +53,7 @@ const AppTheme kEscuro = AppTheme(
   accentDark: Color(0xFFC0841A),
   light: Color(0xFF2A2A2A),
   tabSelected: Color(0xFF2D5C8A),
+  redText: Color(0xFFFF8A80),
 );
 
 const AppTheme kMarrom = AppTheme(
@@ -63,6 +67,7 @@ const AppTheme kMarrom = AppTheme(
   accentDark: Color(0xFFB07C1E),
   light: Color(0xFFF2E6CC),
   tabSelected: Color(0xFFBC8A3C),
+  redText: Color(0xFFB3261E),
 );
 
 const AppTheme kVerde = AppTheme(
@@ -76,6 +81,7 @@ const AppTheme kVerde = AppTheme(
   accentDark: Color(0xFF2E8B00),
   light: Color(0xFFE7F4F2),
   tabSelected: Color(0xFF2C8B6C),
+  redText: Color(0xFFB3261E),
 );
 
 const List<AppTheme> kThemes = [kClaro, kEscuro, kMarrom, kVerde];

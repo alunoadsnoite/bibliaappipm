@@ -1187,7 +1187,11 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                   ),
                   Text(verses[v],
                       style: TextStyle(
-                          color: t.text,
+                          color: AppState.i.redLetterEnabled &&
+                                  AppState.i.isRedLetter(
+                                      _bookIndex!, chapter, v)
+                              ? t.redText
+                              : t.text,
                           fontSize: focusMode ? 18 : 16,
                           height: 1.4)),
                   if (hasNote)

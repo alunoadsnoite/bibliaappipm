@@ -95,6 +95,25 @@ class SettingsTab extends StatelessWidget {
                     color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             for (var i = 0; i < kThemeNames.length; i++) _themeRow(context, i),
+            const SizedBox(height: 8),
+            Material(
+              color: t.card,
+              borderRadius: BorderRadius.circular(8),
+              child: SwitchListTile(
+                value: state.redLetterEnabled,
+                activeTrackColor: t.accent,
+                title: Text(
+                  'Falas de Jesus e Deus em vermelho',
+                  style: TextStyle(color: t.text, fontSize: 15),
+                ),
+                subtitle: Text(
+                  'Destaca em vermelho os versículos com as palavras de '
+                  'Jesus e de Deus em toda a Bíblia.',
+                  style: TextStyle(color: t.muted, fontSize: 12),
+                ),
+                onChanged: (v) => state.setRedLetterEnabled(v),
+              ),
+            ),
             const SizedBox(height: 20),
             _planSection(context),
             const SizedBox(height: 20),

@@ -25,7 +25,7 @@ const Map<String, String> kVersionAssets = {
 };
 
 const String kAppName = 'Bíblia IPM';
-const String kAppVersion = '5.0.4';
+const String kAppVersion = '5.1.0';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -56,6 +56,11 @@ class AppState extends ChangeNotifier {
   String version = 'ara';
   bool loaded = false;
 
+  /// Versículos das falas de Jesus e de Deus, por livro/capítulo canônicos
+  /// (chaves "livro", "capítulo" e valores = números de versículos).
+  Map<String, Map<String, List<int>>> redLetter = {};
+  bool redLetterEnabled = false;
+
   // ------------------------------------------------------------- leitura por voz
   double ttsRate = 0.5;
   double ttsPitch = 1.0;
@@ -80,6 +85,9 @@ class AppState extends ChangeNotifier {
     if (fontScale > 1.5) fontScale = 1.5;
     version = prefs.getString('biblia_version') ?? 'ara';
     if (!kVersionOrder.contains(version)) version = 'ara';
+    redLetterEnabled = prefs.getBool('red_letter_enabled') ?? false;
+
+    await _loadRedLetter();
 
     ttsRate = prefs.getDouble('tts_rate') ?? 0.5;
     ttsPitch = prefs.getDouble('tts_pitch') ?? 1.0;
@@ -245,6 +253,31 @@ class AppState extends ChangeNotifier {
 
   // ------------------------------------------------------------- traduções
 
+  /// Carrega o conjunto de versículos com falas de Deus/Jesus ("letras
+  /// vermelhas"), indexado por livro/capítulo canônicos.
+  Future<void> _loadRedLetter() async {
+    try {
+      final raw = jsonDecode(
+              await rootBundle.loadString('assets/redletter.json'))
+          as Map<String, dynamic>;
+      redLetter = raw.map((book, chapters) => MapEntry(
+            book,
+            (chapters as Map<String, dynamic>).map(
+                (ch, vs) => MapEntry(ch, (vs as List<dynamic>).cast<int>())),
+          ));
+    } catch (_) {
+      redLetter = {};
+    }
+  }
+
+  /// `true` se o versículo (índices canônicos) contém fala de Jesus/Deus.
+  bool isRedLetter(int book, int chapter, int verse) {
+    final chs = redLetter['${book + 1}'];
+    if (chs == null) return false;
+    final vs = chs['${chapter + 1}'];
+    return vs != null && vs.contains(verse + 1);
+  }
+
   Future<List<Book>> _ensureBible(String code) async {
     final cached = _bibleCache[code];
     if (cached != null) return cached;
@@ -360,6 +393,13 @@ class AppState extends ChangeNotifier {
     if (!const ['default', 'female', 'male'].contains(voice)) return;
     ttsVoice = voice;
     prefs.setString('tts_voice', voice);
+    notifyListeners();
+  }
+
+  /// Liga/desliga as falas de Jesus e de Deus em vermelho.
+  void setRedLetterEnabled(bool enabled) {
+    redLetterEnabled = enabled;
+    prefs.setBool('red_letter_enabled', enabled);
     notifyListeners();
   }
 

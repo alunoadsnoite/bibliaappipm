@@ -91,6 +91,22 @@ void main() {
     expect(currentLevelLabel(label), findsOneWidget);
   });
 
+  testWidgets('toggle de letras vermelhas liga e persiste', (tester) async {
+    expect(AppState.i.redLetterEnabled, isFalse);
+
+    await openConfig(tester);
+    final toggle = find.widgetWithText(SwitchListTile,
+        'Falas de Jesus e Deus em vermelho');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(toggle, findsOneWidget);
+
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(AppState.i.redLetterEnabled, isTrue);
+    expect(AppState.i.prefs.getBool('red_letter_enabled'), isTrue);
+  });
+
   testWidgets('todos os temas renderizam a HomeShell sem erro',
       (tester) async {
     for (var i = 0; i < kThemes.length; i++) {
