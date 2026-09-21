@@ -521,81 +521,6 @@ class SettingsTab extends StatelessWidget {
     );
   }
 
-  /// Mini-prévia de um tema: no "Sistema", metade clara e metade escura.
-  Widget _themePreview(int index) {
-    if (index == kSystemThemeIndex) {
-      return _previewSplit(kClaro, kEscuro);
-    }
-    return _previewFace(themeForIndex(index, AppState.i.systemBrightness));
-  }
-
-  Widget _previewSplit(AppTheme a, AppTheme b) {
-    return Container(
-      width: 100,
-      height: 56,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.black26),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _previewFace(a)),
-          Container(width: 1, color: Colors.black26),
-          Expanded(child: _previewFace(b)),
-        ],
-      ),
-    );
-  }
-
-  Widget _previewFace(AppTheme th) {
-    return ColoredBox(
-      color: th.bg,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(width: double.infinity, height: 10, color: th.primaryDark),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 5, 6, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(width: 24, height: 3, color: th.text),
-                const SizedBox(height: 3),
-                Container(
-                    width: 38,
-                    height: 3,
-                    color: th.muted.withValues(alpha: 0.6)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: th.accent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: th.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _themeRow(BuildContext context, int index) {
     final t = appTheme;
     final chosen = AppState.i.themeIndex;
@@ -618,8 +543,6 @@ class SettingsTab extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             child: Row(
               children: [
-                _themePreview(index),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Text(kThemeNames[index],
                       style: TextStyle(color: t.text, fontSize: 15)),
