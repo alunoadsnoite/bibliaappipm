@@ -18,11 +18,11 @@ class _SearchArg {
 }
 
 /// Referência parseada de um texto de busca ("Jo 3:16", "Salmos 23"...).
-class _ParsedRef {
+class ParsedRef {
   final int book;
   final int chapter;
   final int? verse;
-  _ParsedRef(this.book, this.chapter, this.verse);
+  ParsedRef(this.book, this.chapter, this.verse);
 }
 
 /// Agrupamentos dos 66 livros por índices canônicos, independentes da
@@ -64,7 +64,7 @@ String _normalize(String s) {
 
 /// Tenta interpretar `text` como uma referência bíblica ("Jo 3:16",
 /// "Salmos 23", "1co13"). Retorna `null` se não for uma referência válida.
-_ParsedRef? parseReference(List<Book> books, String text) {
+ParsedRef? parseReference(List<Book> books, String text) {
   final m = RegExp(r'^([0-9]{0,2}[A-Za-zÀ-ú]{1,10})\s*(\d{1,3})(?::(\d{1,3}))?$')
       .firstMatch(text.trim());
   if (m == null) return null;
@@ -116,9 +116,9 @@ _ParsedRef? parseReference(List<Book> books, String text) {
   if (givenVerse != null) {
     final v = int.parse(givenVerse);
     if (v < 1 || v > books[bi].chapters[chapter - 1].length) return null;
-    return _ParsedRef(bi, chapter - 1, v - 1);
+    return ParsedRef(bi, chapter - 1, v - 1);
   }
-  return _ParsedRef(bi, chapter - 1, null);
+  return ParsedRef(bi, chapter - 1, null);
 }
 
 List<List<int>> _searchVerses(_SearchArg arg) {
@@ -139,6 +139,27 @@ List<List<int>> _searchVerses(_SearchArg arg) {
     }
   }
   return res;
+}
+
+/// Monta um [TextSpan] destacando (com `highlight`) as ocorrências de
+/// `term` em `source`, ignorando maiúsculas/minúsculas.
+TextSpan _highlightMatches(String source, String term, TextStyle base,
+    TextStyle highlight) {
+  if (term.isEmpty) return TextSpan(text: source, style: base);
+  final lower = source.toLowerCase();
+  final q = term.toLowerCase();
+  final spans = <TextSpan>[];
+  var start = 0;
+  while (true) {
+    final i = lower.indexOf(q, start);
+    if (i < 0) break;
+    if (i > start) spans.add(TextSpan(text: source.substring(start, i)));
+    spans.add(TextSpan(
+        text: source.substring(i, i + q.length), style: highlight));
+    start = i + q.length;
+  }
+  if (start < source.length) spans.add(TextSpan(text: source.substring(start)));
+  return TextSpan(style: base, children: spans);
 }
 
 class BibleTab extends StatefulWidget {
@@ -428,7 +449,7 @@ class _BibleTabState extends State<BibleTab> {
   @override
   Widget build(BuildContext context) {
     final t = appTheme;
-    return Container(
+    return ColoredBox(
       color: t.bg,
       child: SafeArea(
         bottom: false,
@@ -557,7 +578,7 @@ class _BibleTabState extends State<BibleTab> {
       ..._recentSection(),
     ];
     String? lastTestament;
-    for (final g in _kGroups) {
+    for (var g in _kGroups) {
       final testamento =
           g.indices.first >= 39 ? 'NOVO TESTAMENTO' : 'ANTIGO TESTAMENTO';
       if (testamento != lastTestament) {
@@ -565,7 +586,7 @@ class _BibleTabState extends State<BibleTab> {
         lastTestament = testamento;
       }
       final items = <Widget>[];
-      for (final idx in g.indices) {
+      for (var idx in g.indices) {
         if (idx < bible.length) items.add(_bookItem(bible[idx], idx));
       }
       if (items.isEmpty) continue;
@@ -642,7 +663,7 @@ class _BibleTabState extends State<BibleTab> {
     final t = appTheme;
     final p = AppState.i.lastPosition;
     final bible = AppState.i.bible;
-    if (p == null || p.book >= bible.length) return SizedBox.shrink();
+    if (p == null || p.book >= bible.length) return const SizedBox.shrink();
     final b = bible[p.book];
     final label = 'Continuar lendo · ${b.name} ${p.chapter + 1}';
     return Padding(
@@ -686,7 +707,7 @@ class _BibleTabState extends State<BibleTab> {
     if (bIdx >= bible.length ||
         cIdx >= bible[bIdx].chapters.length ||
         vIdx >= bible[bIdx].chapters[cIdx].length) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
     final ref = formatRef(bible, bIdx, cIdx, vIdx);
     final text = bible[bIdx].chapters[cIdx][vIdx];
@@ -703,10 +724,10 @@ class _BibleTabState extends State<BibleTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                const Row(
                   children: [
                     Icon(Icons.wb_sunny, color: Colors.white, size: 16),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text('VERSÍCULO DO DIA',
                         style: TextStyle(
                             color: Colors.white70,
@@ -716,11 +737,11 @@ class _BibleTabState extends State<BibleTab> {
                 ),
                 const SizedBox(height: 6),
                 Text(text,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white, fontSize: 16, height: 1.4)),
                 const SizedBox(height: 6),
                 Text(ref,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
                         fontWeight: FontWeight.bold)),
@@ -735,7 +756,7 @@ class _BibleTabState extends State<BibleTab> {
   /// Painel do plano de leitura anual.
   Widget _planCard() {
     final state = AppState.i;
-    if (!state.planEnabled) return SizedBox.shrink();
+    if (!state.planEnabled) return const SizedBox.shrink();
     final t = appTheme;
     final total = state.totalChapters;
     final read = state.totalRead;
@@ -1370,7 +1391,7 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                     for (var i = 0; i < kHighlightColors.length; i++)
                       GestureDetector(
                         onTap: () async {
-                          for (final v in _selItems) {
+                          for (var v in _selItems) {
                             await AppState.i.setHighlight(_selKey(v.$1), i);
                           }
                           if (ctx.mounted) Navigator.pop(ctx);
@@ -1392,7 +1413,7 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                       ),
                     GestureDetector(
                       onTap: () async {
-                        for (final v in _selItems) {
+                        for (var v in _selItems) {
                           await AppState.i.setHighlight(_selKey(v.$1), -1);
                         }
                         if (ctx.mounted) Navigator.pop(ctx);
@@ -1599,8 +1620,10 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                 color: t.accent,
                 fontSize: 12,
                 fontWeight: FontWeight.bold)),
-        subtitle: Text(text,
-            style: TextStyle(color: t.text, fontSize: 15)),
+        subtitle: Text.rich(_highlightMatches(
+            text, _search.text.trim(),
+            TextStyle(color: t.text, fontSize: 15),
+            TextStyle(color: t.accent, fontWeight: FontWeight.bold))),
       ),
     );
   }

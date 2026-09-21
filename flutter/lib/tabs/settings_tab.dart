@@ -34,7 +34,7 @@ class SettingsTab extends StatelessWidget {
     final state = AppState.i;
     final level = fontLevelIndex(state.fontScale);
 
-    return Container(
+    return ColoredBox(
       color: t.bg,
       child: SafeArea(
         bottom: false,
@@ -524,7 +524,7 @@ class SettingsTab extends StatelessWidget {
   Widget _themeRow(BuildContext context, int index) {
     final t = appTheme;
     final selected = AppState.i.themeIndex == index;
-    final swatch = themeForIndex(index);
+    final swatch = themeForIndex(index, AppState.i.systemBrightness);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -540,14 +540,28 @@ class SettingsTab extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             child: Row(
               children: [
-                Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: swatch.primary,
-                    shape: BoxShape.circle,
+                if (index == kSystemThemeIndex)
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const SweepGradient(
+                        colors: [Colors.white, Colors.black],
+                        stops: [0.0, 1.0],
+                      ),
+                      border: Border.all(color: Colors.black26),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: swatch.primary,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(kThemeNames[index],
@@ -672,6 +686,7 @@ class SettingsTab extends StatelessWidget {
     final t = appTheme;
     final json = AppState.i.buildExportJson();
     await copyText(json);
+    if (!context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(SnackBar(
       content: Text(

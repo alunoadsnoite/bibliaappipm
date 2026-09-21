@@ -24,7 +24,8 @@ const List<String> kHighlightNames = [
   'Rosa',
 ];
 
-AppTheme get appTheme => themeForIndex(AppState.i.themeIndex);
+AppTheme get appTheme =>
+    themeForIndex(AppState.i.themeIndex, AppState.i.systemBrightness);
 
 /// Remove diacríticos (acentos e cedilha) de uma string.
 String stripDiacritics(String s) {
@@ -169,7 +170,7 @@ Future<void> showLineMenu(
                       onTap: () async {
                         await AppState.i.setHighlight(highlightKey, i);
                         onHighlightChanged?.call(i);
-                        Navigator.pop(ctx);
+                        if (ctx.mounted) Navigator.pop(ctx);
                       },
                       child: Container(
                         width: 40,
@@ -189,7 +190,7 @@ Future<void> showLineMenu(
                       onTap: () async {
                         await AppState.i.setHighlight(highlightKey, -1);
                         onHighlightChanged?.call(-1);
-                        Navigator.pop(ctx);
+                        if (ctx.mounted) Navigator.pop(ctx);
                       },
                       child: Container(
                         width: 40,

@@ -68,7 +68,7 @@ class FlutterTtsEngine implements TtsEngine {
     final raw = await _tts.getVoices;
     if (raw is! List) return const [];
     final out = <Map<String, String>>[];
-    for (final v in raw) {
+    for (var v in raw) {
       if (v is! Map) continue;
       final name = (v['name'] ?? '') as String;
       final locale = (v['locale'] ?? '') as String;
@@ -91,8 +91,8 @@ class FlutterTtsEngine implements TtsEngine {
 /// Engine falsa para testes unitários.
 ///
 /// Por padrão, [speak] é síncrono (completa imediatamente). Para testar
-/// interrupções, use [FakeTtsEngine.async] ou configure [delay] para
-/// fazer cada [speak] completar de forma assíncrona.
+/// interrupções, use `FakeTtsEngine(async: true)` para fazer cada [speak]
+/// completar de forma assíncrona.
 class FakeTtsEngine implements TtsEngine {
   final List<String> spoken = [];
   final List<String> languagesSet = [];
@@ -199,19 +199,10 @@ class TtsService {
   /// Índice do versículo sendo lido (ou `null` fora de uma sequência).
   final ValueNotifier<int?> index = ValueNotifier(null);
 
-  List<String> _queue = [];
-  int _cursor = 0;
-  bool _cancel = false;
+  List<String> queue = [];
+  int cursor = 0;
+  bool cancel = false;
   Completer<void>? _completer;
-
-  // --- acessadores de teste ---
-  List<String> get testQueue => _queue;
-  set testQueue(List<String> v) => _queue = v;
-  int get testCursor => _cursor;
-  set testCursor(int v) => _cursor = v;
-  bool get testCancel => _cancel;
-  set testCancel(bool v) => _cancel = v;
-  // ---
 
   bool get isActive =>
       phase.value == TtsPhase.playing || phase.value == TtsPhase.paused;
@@ -245,14 +236,14 @@ class TtsService {
         .where((v) =>
             (v['locale'] ?? '').toLowerCase().startsWith('pt'))
         .toList();
-    for (final v in pt) {
+    for (var v in pt) {
       final g = (v['gender'] ?? '').toLowerCase();
       if (g == gender) return v;
     }
     final kws = gender == 'female'
         ? const ['female', 'femin', 'feminina', 'fem']
         : const ['male', 'masc', 'masculin', 'masculina'];
-    for (final v in pt) {
+    for (var v in pt) {
       final name = (v['name'] ?? '').toLowerCase();
       if (kws.any((k) => name.contains(k))) return v;
     }
@@ -306,7 +297,7 @@ class TtsService {
 
   Future<void> _speakOne(String text) {
     return _ensureLanguage().then((_) => _applyVoice()).then((_) {
-      _cancel = false;
+      cancel = false;
       final c = Completer<void>();
       _completer = c;
       _engine.speak(text).then((_) {
@@ -319,16 +310,16 @@ class TtsService {
   }
 
   Future<void> _loop() async {
-    while (!_cancel && _cursor < _queue.length) {
-      index.value = _cursor;
-      await _speakOne(_queue[_cursor]);
-      _cursor++;
+    while (!cancel && cursor < queue.length) {
+      index.value = cursor;
+      await _speakOne(queue[cursor]);
+      cursor++;
     }
-    if (!_cancel) {
+    if (!cancel) {
       phase.value = TtsPhase.none;
       index.value = null;
-      _queue = [];
-      _cursor = 0;
+      queue = [];
+      cursor = 0;
     }
   }
 
@@ -337,9 +328,9 @@ class TtsService {
   Future<void> playChapter(List<String> items) async {
     if (items.isEmpty) return;
     if (isActive) await stop();
-    _queue = List.of(items);
-    _cursor = 0;
-    _cancel = false;
+    queue = List.of(items);
+    cursor = 0;
+    cancel = false;
     phase.value = TtsPhase.playing;
     await _loop();
   }
@@ -358,7 +349,7 @@ class TtsService {
   /// Pausa a leitura do capítulo (mantém a posição atual).
   Future<void> pause() async {
     if (phase.value != TtsPhase.playing) return;
-    _cancel = true;
+    cancel = true;
     phase.value = TtsPhase.paused;
     await _engine.stop();
     _release();
@@ -367,19 +358,19 @@ class TtsService {
   /// Continua do versículo em que a leitura foi pausada.
   Future<void> resume() async {
     if (phase.value != TtsPhase.paused) return;
-    if (_queue.isEmpty) return; // fila corrompida ou limpa: não resetar
-    if (_cursor >= _queue.length) _cursor = 0;
-    _cancel = false;
+    if (queue.isEmpty) return; // fila corrompida ou limpa: não resetar
+    if (cursor >= queue.length) cursor = 0;
+    cancel = false;
     phase.value = TtsPhase.playing;
     await _loop();
   }
 
   Future<void> stop() async {
-    _cancel = true;
+    cancel = true;
     await _engine.stop();
     _release();
-    _queue = [];
-    _cursor = 0;
+    queue = [];
+    cursor = 0;
     index.value = null;
     if (phase.value == TtsPhase.playing ||
         phase.value == TtsPhase.paused) {

@@ -42,7 +42,7 @@ class _SongsTabState extends State<SongsTab> {
   @override
   Widget build(BuildContext context) {
     final t = appTheme;
-    return Container(
+    return ColoredBox(
       color: t.bg,
       child: SafeArea(
         bottom: false,
@@ -203,7 +203,7 @@ class _SongsTabState extends State<SongsTab> {
   List<String> _songStanzas(String lyrics) {
     final groups = <List<String>>[];
     var cur = <String>[];
-    for (final l in lyrics.split('\n')) {
+    for (var l in lyrics.split('\n')) {
       if (l.trim().isEmpty) {
         if (cur.isNotEmpty) {
           groups.add(cur);

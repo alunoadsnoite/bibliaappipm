@@ -29,7 +29,7 @@ const String kAppName = 'Bíblia IPM';
 
 /// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
 /// pelo valor real do pacote via [PackageInfo].
-const String kAppVersion = '5.1.0';
+const String kAppVersion = '5.2.0';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -64,6 +64,10 @@ class AppState extends ChangeNotifier {
   String version = 'ara';
   bool loaded = false;
 
+  /// Brilho atual do aparelho (claro/escuro), usado pelo tema Sistema.
+  /// Atualizado no build da raiz a partir do `MediaQuery`.
+  Brightness systemBrightness = Brightness.light;
+
   /// Versão real do pacote instalado, preenchida no [load].
   String appVersion = kAppVersion;
 
@@ -96,7 +100,7 @@ class AppState extends ChangeNotifier {
     }
     themeIndex = prefs.getInt('theme') ??
         ((prefs.getBool('night') ?? false) ? 1 : 0);
-    if (themeIndex < 0 || themeIndex >= kThemes.length) themeIndex = 0;
+    if (themeIndex < 0 || themeIndex >= kThemeNames.length) themeIndex = 0;
     fontScale = prefs.getDouble('font_scale') ?? 1.0;
     if (fontScale < 0.5) fontScale = 0.5;
     if (fontScale > 1.5) fontScale = 1.5;
@@ -181,7 +185,7 @@ class AppState extends ChangeNotifier {
 
       final highlights = data['highlights'];
       if (highlights is Map) {
-        for (final entry in highlights.entries) {
+        for (var entry in highlights.entries) {
           final key = 'hl_${entry.key}';
           final value = entry.value;
           if (value is int && !prefs.containsKey(key)) {
@@ -242,7 +246,7 @@ class AppState extends ChangeNotifier {
   Future<void> _migrateKeysToCanonical() async {
     if (prefs.getBool('migrated_keys_v2') == true) return;
 
-    for (final key in prefs.getKeys()) {
+    for (var key in prefs.getKeys()) {
       if (!key.startsWith('hl_v:')) continue;
       final canon = normalizeVKey(key.substring(3));
       if (canon == key.substring(3)) continue;
@@ -299,8 +303,10 @@ class AppState extends ChangeNotifier {
     final cached = _bibleCache[code];
     if (cached != null) return cached;
     final asset = kVersionAssets[code];
-    if (asset == null) return _bibleCache['jfaal'] ??
+    if (asset == null) {
+      return _bibleCache['jfaal'] ??
         await _loadBible(kVersionAssets['jfaal']!);
+    }
     final books = await _loadBible(asset);
     _bibleCache[code] = books;
     return books;
@@ -309,7 +315,7 @@ class AppState extends ChangeNotifier {
   /// Garante que todas as traduções estejam em memória (usado pela
   /// comparação lado a lado).
   Future<void> ensureAllBibles() async {
-    for (final code in kVersionOrder) {
+    for (var code in kVersionOrder) {
       await _ensureBible(code);
     }
   }
@@ -342,7 +348,7 @@ class AppState extends ChangeNotifier {
   /// Total de capítulos da Bíblia na versão ativa.
   int get totalChapters {
     var n = 0;
-    for (final b in bible) {
+    for (var b in bible) {
       n += b.chapters.length;
     }
     return n;
@@ -382,6 +388,7 @@ class AppState extends ChangeNotifier {
   // ------------------------------------------------------------- preferências
 
   void setTheme(int index) {
+    if (index < 0 || index >= kThemeNames.length) return;
     themeIndex = index;
     prefs.setInt('theme', index);
     notifyListeners();
@@ -663,7 +670,7 @@ class AppState extends ChangeNotifier {
 
   Map<String, int> _allHighlights() {
     final map = <String, int>{};
-    for (final key in prefs.getKeys()) {
+    for (var key in prefs.getKeys()) {
       if (!key.startsWith('hl_')) continue;
       final v = prefs.getInt(key);
       if (v != null) map[key.substring(3)] = v;
@@ -702,7 +709,7 @@ class AppState extends ChangeNotifier {
   /// Mescla destaques, notas, capítulos lidos e recentes; sobrescreve
   /// músicas, boletim e preferências.
   Future<void> importFromJson(String raw) async {
-    final Map<String, dynamic> data;
+    Map<String, dynamic> data;
     try {
       data = jsonDecode(raw) as Map<String, dynamic>;
     } catch (_) {
@@ -711,7 +718,7 @@ class AppState extends ChangeNotifier {
 
     final highlights = data['highlights'];
     if (highlights is Map) {
-      for (final e in highlights.entries) {
+      for (var e in highlights.entries) {
         final key = normalizeVKey(e.key.toString());
         final value = e.value;
         if (value is int) {
@@ -722,7 +729,7 @@ class AppState extends ChangeNotifier {
 
     final notesIn = data['notes'];
     if (notesIn is Map) {
-      for (final e in notesIn.entries) {
+      for (var e in notesIn.entries) {
         final key = normalizeVKey(e.key.toString());
         final t = (e.value as String? ?? '').trim();
         if (t.isEmpty) {
@@ -791,7 +798,7 @@ class AppState extends ChangeNotifier {
 
     final positions = data['positions'];
     if (positions is Map) {
-      for (final e in positions.entries) {
+      for (var e in positions.entries) {
         try {
           final p = Position.fromJson(e.value as Map<String, dynamic>);
           await prefs.setString(
@@ -805,7 +812,7 @@ class AppState extends ChangeNotifier {
       await setVersion(savedVersion);
     }
     final theme = data['theme'];
-    if (theme is int && theme >= 0 && theme < kThemes.length) {
+    if (theme is int && theme >= 0 && theme < kThemeNames.length) {
       setTheme(theme);
     }
 

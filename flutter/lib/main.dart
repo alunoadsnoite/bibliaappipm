@@ -25,11 +25,15 @@ class BibliaApp extends StatefulWidget {
 class _BibliaAppState extends State<BibliaApp> {
   @override
   Widget build(BuildContext context) {
+    // Dependência em MediaQuery: quando o brilho do aparelho muda, este build
+    // roda de novo antes dos filhos, atualizando o tema Sistema.
+    final sys = MediaQuery.platformBrightnessOf(context);
+    AppState.i.systemBrightness = sys;
     return ListenableBuilder(
       listenable: AppState.i,
       builder: (context, _) {
-        final t = themeForIndex(AppState.i.themeIndex);
-        final brightness = resolveBrightness(AppState.i.themeIndex);
+        final t = themeForIndex(AppState.i.themeIndex, sys);
+        final brightness = resolveBrightness(AppState.i.themeIndex, sys);
         return MaterialApp(
           title: kAppName,
           debugShowCheckedModeBanner: false,
@@ -77,14 +81,16 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final sys = MediaQuery.platformBrightnessOf(context);
+    AppState.i.systemBrightness = sys;
     return ListenableBuilder(
       listenable: AppState.i,
       builder: (context, _) {
-        final t = themeForIndex(AppState.i.themeIndex);
+        final t = themeForIndex(AppState.i.themeIndex, sys);
         return Scaffold(
           body: IndexedStack(
             index: _index,
-            children: [
+            children: const [
               BibleTab(),
               HymnsTab(),
               SongsTab(),

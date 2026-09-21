@@ -51,7 +51,7 @@ class _HymnsTabState extends State<HymnsTab> {
   @override
   Widget build(BuildContext context) {
     final t = appTheme;
-    return Container(
+    return ColoredBox(
       color: t.bg,
       child: SafeArea(
         bottom: false,

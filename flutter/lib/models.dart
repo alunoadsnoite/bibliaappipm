@@ -30,7 +30,7 @@ class Hymn {
     final verses = (o['verses'] as List<dynamic>);
     final names = <String>[];
     final stanzas = <List<String>>[];
-    for (final v in verses) {
+    for (var v in verses) {
       final m = v as Map<String, dynamic>;
       names.add((m['name'] ?? '') as String);
       stanzas.add((m['lines'] as List<dynamic>).map((e) => e as String).toList());
@@ -46,8 +46,8 @@ class Hymn {
 
   String searchText() {
     final sb = StringBuffer('$title $author ');
-    for (final s in stanzas) {
-      for (final l in s) {
+    for (var s in stanzas) {
+      for (var l in s) {
         sb.write('$l ');
       }
     }
@@ -191,9 +191,9 @@ class BibliotecaText {
 
   String searchText() {
     final sb = StringBuffer('$title $sub ');
-    for (final it in items) {
+    for (var it in items) {
       sb.write('${it.t} ');
-      for (final p in it.p) {
+      for (var p in it.p) {
         sb.write('$p ');
       }
     }

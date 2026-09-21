@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:biblia_app/store.dart';
 import 'package:biblia_app/tts.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TtsService — estado inicial', () {
@@ -38,8 +38,8 @@ void main() {
       expect(svc.phase.value, TtsPhase.none);
       expect(svc.index.value, isNull);
       expect(svc.isActive, isFalse);
-      expect(svc.testQueue, isEmpty);
-      expect(svc.testCursor, 0);
+      expect(svc.queue, isEmpty);
+      expect(svc.cursor, 0);
     });
 
     test('pause só afeta se playing', () async {
@@ -62,7 +62,7 @@ void main() {
       final svc = TtsService.createForTest();
       svc.phase.value = TtsPhase.playing;
       await svc.pause();
-      expect(svc.testCancel, isTrue);
+      expect(svc.cancel, isTrue);
     });
   });
 
@@ -72,15 +72,15 @@ void main() {
       final engine = FakeTtsEngine(async: true);
       final svc = TtsService.createForTest(fake: engine);
       svc.phase.value = TtsPhase.paused;
-      svc.testQueue = ['x'];
-      svc.testCursor = 0;
-      svc.testCancel = true;
+      svc.queue = ['x'];
+      svc.cursor = 0;
+      svc.cancel = true;
       await svc.resume();
       // Após completar o loop (engine async completa em microtask),
       // phase volta para none e queue é limpa.
       expect(svc.phase.value, TtsPhase.none);
-      expect(svc.testQueue, isEmpty);
-      expect(svc.testCursor, 0);
+      expect(svc.queue, isEmpty);
+      expect(svc.cursor, 0);
     });
 
     test('resume com phase não-paused não faz nada', () async {
@@ -125,8 +125,8 @@ void main() {
       expect(svc.phase.value, TtsPhase.none);
       expect(svc.index.value, isNull);
       expect(engine.spoken, ['um', 'dois', 'três']);
-      expect(svc.testQueue, isEmpty);
-      expect(svc.testCursor, 0);
+      expect(svc.queue, isEmpty);
+      expect(svc.cursor, 0);
     });
 
     test('playChapter preenche _queue e depois limpa', () async {
@@ -134,8 +134,8 @@ void main() {
       svc.phase.value = TtsPhase.none;
       await svc.playChapter(['a', 'b']);
       // Após o loop completar, _queue deve ser limpo e _cursor resetado
-      expect(svc.testQueue, isEmpty);
-      expect(svc.testCursor, 0);
+      expect(svc.queue, isEmpty);
+      expect(svc.cursor, 0);
       expect(svc.phase.value, TtsPhase.none);
     });
 

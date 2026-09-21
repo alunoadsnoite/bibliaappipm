@@ -46,7 +46,7 @@ class _LibraryTabState extends State<LibraryTab> {
   @override
   Widget build(BuildContext context) {
     final t = appTheme;
-    return Container(
+    return ColoredBox(
       color: t.bg,
       child: SafeArea(
         bottom: false,
@@ -264,12 +264,12 @@ class _LibraryTabState extends State<LibraryTab> {
   void _playDoc(BibliotecaText d) {
     var first = true;
     final queue = <String>[];
-    for (final it in d.items) {
+    for (var it in d.items) {
       if (it.t.isNotEmpty) {
         queue.add(first ? '${d.title}. ${it.t}' : it.t);
         first = false;
       }
-      for (final p in it.p) {
+      for (var p in it.p) {
         queue.add(first ? '${d.title}. $p' : p);
         first = false;
       }

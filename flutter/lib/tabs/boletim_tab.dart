@@ -44,7 +44,7 @@ class _BoletimTabState extends State<BoletimTab> {
   @override
   Widget build(BuildContext context) {
     final t = appTheme;
-    return Container(
+    return ColoredBox(
       color: t.bg,
       child: SafeArea(
         bottom: false,

@@ -15,10 +15,10 @@ void main() {
   });
 
   test('todos os hinos têm título e ao menos uma linha', () {
-    for (final h in AppState.i.hymns) {
+    for (var h in AppState.i.hymns) {
       expect(h.title.trim(), isNotEmpty, reason: 'hino ${h.num}');
       var lines = 0;
-      for (final s in h.stanzas) {
+      for (var s in h.stanzas) {
         lines += s.length;
       }
       expect(lines, greaterThan(0), reason: 'hino ${h.num}');
@@ -26,9 +26,9 @@ void main() {
   });
 
   test('nenhuma linha de hino fica vazia', () {
-    for (final h in AppState.i.hymns) {
-      for (final s in h.stanzas) {
-        for (final l in s) {
+    for (var h in AppState.i.hymns) {
+      for (var s in h.stanzas) {
+        for (var l in s) {
           expect(l.trim(), isNotEmpty, reason: 'hino ${h.num}');
         }
       }

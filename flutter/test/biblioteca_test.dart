@@ -32,11 +32,11 @@ void main() {
   });
 
   test('todo item tem conteúdo e parágrafos não vazios', () {
-    for (final d in AppState.i.biblioteca) {
+    for (var d in AppState.i.biblioteca) {
       expect(d.title.trim(), isNotEmpty, reason: d.id);
-      for (final it in d.items) {
+      for (var it in d.items) {
         expect(it.p, isNotEmpty, reason: '${d.id} item "${it.t}"');
-        for (final p in it.p) {
+        for (var p in it.p) {
           expect(p.trim(), isNotEmpty, reason: '${d.id} "${it.t}"');
         }
       }

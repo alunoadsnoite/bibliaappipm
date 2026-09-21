@@ -86,19 +86,34 @@ const AppTheme kVerde = AppTheme(
 
 const List<AppTheme> kThemes = [kClaro, kEscuro, kMarrom, kVerde];
 
+/// Índice do tema "Sistema" (segue o claro/escuro do aparelho).
+const int kSystemThemeIndex = 4;
+
 const List<String> kThemeNames = [
   'Claro',
   'Escuro',
   'Marrom',
   'Verde',
+  'Sistema',
 ];
 
-/// Resolve o brilho (claro/escuro) de um índice de tema.
-Brightness resolveBrightness(int index) =>
-    index == 1 ? Brightness.dark : Brightness.light;
+/// Resolve o brilho (claro/escuro) de um índice de tema. O tema Sistema usa
+/// o brilho do aparelho ([system]); os demais têm brilho fixo.
+Brightness resolveBrightness(int index,
+    [Brightness system = Brightness.light]) {
+  if (index == kSystemThemeIndex) return system;
+  return index == 1 ? Brightness.dark : Brightness.light;
+}
 
-/// Paleta efetiva para um índice de tema.
-AppTheme themeForIndex(int index) => kThemes[index];
+/// Paleta efetiva para um índice de tema. No tema Sistema, alterna entre a
+/// paleta clara e a escura conforme o brilho do aparelho.
+AppTheme themeForIndex(int index,
+    [Brightness system = Brightness.light]) {
+  if (index == kSystemThemeIndex) {
+    return system == Brightness.dark ? kEscuro : kClaro;
+  }
+  return kThemes[index];
+}
 
 const List<double> kFontLevels = [0.85, 1.0, 1.15, 1.30];
 const List<String> kFontLevelNames = [
