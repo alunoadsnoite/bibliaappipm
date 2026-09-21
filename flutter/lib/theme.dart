@@ -115,6 +115,16 @@ AppTheme themeForIndex(int index,
   return kThemes[index];
 }
 
+/// Índice do tema efetivamente exibido. No tema Sistema, retorna 0 (claro)
+/// ou 1 (escuro) conforme o brilho do aparelho.
+int effectiveThemeIndex(int index,
+    [Brightness system = Brightness.light]) {
+  if (index == kSystemThemeIndex) {
+    return system == Brightness.dark ? 1 : 0;
+  }
+  return index;
+}
+
 const List<double> kFontLevels = [0.85, 1.0, 1.15, 1.30];
 const List<String> kFontLevelNames = [
   'Pequeno',

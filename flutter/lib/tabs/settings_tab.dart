@@ -523,7 +523,11 @@ class SettingsTab extends StatelessWidget {
 
   Widget _themeRow(BuildContext context, int index) {
     final t = appTheme;
-    final selected = AppState.i.themeIndex == index;
+    final chosen = AppState.i.themeIndex;
+    final effective =
+        effectiveThemeIndex(chosen, AppState.i.systemBrightness);
+    final selected = effective == index;
+    final isSystemMode = chosen == kSystemThemeIndex;
     final swatch = themeForIndex(index, AppState.i.systemBrightness);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -567,7 +571,25 @@ class SettingsTab extends StatelessWidget {
                   child: Text(kThemeNames[index],
                       style: TextStyle(color: t.text, fontSize: 15)),
                 ),
-                if (selected)
+                if (index == kSystemThemeIndex && isSystemMode)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: t.accent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      'AUTO',
+                      style: TextStyle(
+                        color: t.accent,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  )
+                else if (selected)
                   Icon(Icons.check, color: t.accent, size: 20),
               ],
             ),
