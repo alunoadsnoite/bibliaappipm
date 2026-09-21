@@ -26,17 +26,20 @@ const List<String> kHighlightNames = [
 
 AppTheme get appTheme => themeForIndex(AppState.i.themeIndex);
 
-/// Coloca o texto em minúsculas e remove os acentos, para ordenação e
-/// comparação que ignorem diacríticos (ex.: "Água" e "Agua" empatam).
-String foldSortKey(String s) {
+/// Remove diacríticos (acentos e cedilha) de uma string.
+String stripDiacritics(String s) {
   const accents = 'áàâãäéèêëíìîïóòôõöúùûüç';
   const plain = 'aaaaaeeeeiiiiooooouuuuc';
-  var r = s.toLowerCase();
+  var r = s;
   for (var i = 0; i < accents.length; i++) {
     r = r.replaceAll(accents[i], plain[i]);
   }
   return r;
 }
+
+/// Coloca o texto em minúsculas e remove os acentos, para ordenação e
+/// comparação que ignorem diacríticos (ex.: "Água" e "Agua" empatam).
+String foldSortKey(String s) => stripDiacritics(s.toLowerCase());
 
 Color highlightColor(String key) {
   final i = AppState.i.getHighlight(key);

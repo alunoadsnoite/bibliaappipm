@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models.dart';
@@ -25,6 +26,9 @@ const Map<String, String> kVersionAssets = {
 };
 
 const String kAppName = 'Bíblia IPM';
+
+/// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
+/// pelo valor real do pacote via [PackageInfo].
 const String kAppVersion = '5.1.0';
 
 const int kDefaultDailyGoal = 4;
@@ -32,6 +36,10 @@ const int kMaxRecent = 6;
 
 const MethodChannel _migrationChannel =
     MethodChannel('br.com.valdenor.bibliaapp/migration');
+
+/// Decodifica o JSON de uma Bíblia em um isolate separado, para não travar a
+/// interface na leitura de arquivos grandes (ex.: 4 MB por tradução).
+List<dynamic> _decodeBibleJson(String text) => jsonDecode(text) as List<dynamic>;
 
 class AppState extends ChangeNotifier {
   AppState._();
@@ -56,6 +64,9 @@ class AppState extends ChangeNotifier {
   String version = 'ara';
   bool loaded = false;
 
+  /// Versão real do pacote instalado, preenchida no [load].
+  String appVersion = kAppVersion;
+
   /// Versículos das falas de Jesus e de Deus, por livro/capítulo canônicos
   /// (chaves "livro", "capítulo" e valores = números de versículos).
   Map<String, Map<String, List<int>>> redLetter = {};
@@ -77,6 +88,12 @@ class AppState extends ChangeNotifier {
   Future<void> load() async {
     prefs = await SharedPreferences.getInstance();
     await _migrateFromNative();
+    try {
+      final info = await PackageInfo.fromPlatform();
+      appVersion = info.version;
+    } catch (_) {
+      // Mantém o fallback ([kAppVersion]) fora de plataformas suportadas.
+    }
     themeIndex = prefs.getInt('theme') ??
         ((prefs.getBool('night') ?? false) ? 1 : 0);
     if (themeIndex < 0 || themeIndex >= kThemes.length) themeIndex = 0;
@@ -317,7 +334,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<List<Book>> _loadBible(String asset) async {
-    final raw = jsonDecode(await rootBundle.loadString(asset)) as List<dynamic>;
+    final text = await rootBundle.loadString(asset);
+    final raw = await compute(_decodeBibleJson, text);
     return raw.map((e) => Book.fromJson(e as Map<String, dynamic>)).toList();
   }
 

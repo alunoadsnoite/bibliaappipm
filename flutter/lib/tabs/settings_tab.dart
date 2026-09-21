@@ -46,7 +46,7 @@ class SettingsTab extends StatelessWidget {
                 style: TextStyle(
                     color: t.text, fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
-            Text('$kAppName - versão $kAppVersion',
+            Text('$kAppName - versão ${state.appVersion}',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: t.muted, fontSize: 13)),
             const SizedBox(height: 20),
@@ -124,7 +124,7 @@ class SettingsTab extends StatelessWidget {
             _contactTile(
               icon: Icons.info_outline,
               title: 'Sobre o app',
-              subtitle: 'Versão $kAppVersion e informações',
+              subtitle: 'Versão ${AppState.i.appVersion} e informações',
               onTap: () => _aboutDialog(context),
             ),
             const SizedBox(height: 20),
@@ -378,7 +378,7 @@ class SettingsTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text('Versão $kAppVersion',
+              Text('Versão ${AppState.i.appVersion}',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: t.muted, fontSize: 13)),
               const SizedBox(height: 12),

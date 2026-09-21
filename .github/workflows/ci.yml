@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Get Flutter packages
+        run: cd flutter && flutter pub get
+      - name: Analyze
+        run: cd flutter && flutter analyze
+      - name: Test
+        run: cd flutter && flutter test

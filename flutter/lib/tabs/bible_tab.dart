@@ -57,12 +57,7 @@ const int _kMaxSearchResults = 3000;
 /// Normaliza texto para comparação de abreviações/nomes (minúsculas, sem
 /// acentos e sem pontuação).
 String _normalize(String s) {
-  const accents = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const plain = 'aaaaaeeeeiiiiooooouuuuc';
-  var r = s.toLowerCase();
-  for (var i = 0; i < accents.length; i++) {
-    r = r.replaceAll(accents[i], plain[i]);
-  }
+  var r = stripDiacritics(s.toLowerCase());
   r = r.replaceAll(RegExp('[^a-z0-9]'), '');
   return r;
 }
