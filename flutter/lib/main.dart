@@ -90,13 +90,19 @@ class _HomeShellState extends State<HomeShell> {
         return Scaffold(
           body: IndexedStack(
             index: _index,
-            children: const [
-              BibleTab(),
-              HymnsTab(),
-              SongsTab(),
-              LibraryTab(),
-              BoletimTab(),
-              SettingsTab(),
+            // A lista NÃO pode ser `const`: widgets const são canonicados e o
+            // Flutter pula o `update()` deles (Element.updateChild compara
+            // `child.widget == newWidget`), então as abas nunca mais rodariam
+            // o `build()` e não repaintariam na troca de tema. É exatamente o
+            // bug que a v4.2.1 corrigiu e que voltou na v5.2.0.
+            // ignore: prefer_const_literals_to_create_immutables
+            children: [
+              BibleTab(), // ignore: prefer_const_constructors
+              HymnsTab(), // ignore: prefer_const_constructors
+              SongsTab(), // ignore: prefer_const_constructors
+              LibraryTab(), // ignore: prefer_const_constructors
+              BoletimTab(), // ignore: prefer_const_constructors
+              SettingsTab(), // ignore: prefer_const_constructors
             ],
           ),
           bottomNavigationBar: BottomNavigationBar(

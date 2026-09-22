@@ -249,24 +249,34 @@ void main() {
   });
 
   group('tema', () {
-    test('tema do sistema não existe mais', () {
-      expect(kThemeNames, isNot(contains('Sistema')));
-      expect(kThemeNames.length, kThemes.length);
+    test('tema Sistema existe como último índice', () {
+      expect(kThemeNames.last, 'Sistema');
+      expect(kSystemThemeIndex, kThemes.length);
+      expect(kThemeNames.length, kThemes.length + 1);
     });
 
-    test('tema persistido inválido (Sistema removido) é normalizado',
-        () async {
-      SharedPreferences.setMockInitialValues({'theme': 4});
+    test('tema persistido fora da faixa é normalizado', () async {
+      SharedPreferences.setMockInitialValues({'theme': 99});
       await AppState.i.load();
       expect(AppState.i.themeIndex, 0);
     });
 
     test('importar backup com tema inválido não quebra', () async {
+      AppState.i.setTheme(0);
       final json = AppState.i.buildExportJson();
       final data = jsonDecode(json) as Map<String, dynamic>;
-      data['theme'] = 4;
+      data['theme'] = 99;
       await AppState.i.importFromJson(jsonEncode(data));
       expect(AppState.i.themeIndex, 0);
+    });
+
+    test('importar backup com tema válido é aplicado', () async {
+      AppState.i.setTheme(0);
+      final json = AppState.i.buildExportJson();
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      data['theme'] = 2;
+      await AppState.i.importFromJson(jsonEncode(data));
+      expect(AppState.i.themeIndex, 2);
     });
   });
 }

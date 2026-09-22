@@ -29,7 +29,7 @@ const String kAppName = 'Bíblia IPM';
 
 /// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
 /// pelo valor real do pacote via [PackageInfo].
-const String kAppVersion = '5.2.0';
+const String kAppVersion = '5.2.2';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -101,9 +101,7 @@ class AppState extends ChangeNotifier {
     themeIndex = prefs.getInt('theme') ??
         ((prefs.getBool('night') ?? false) ? 1 : 0);
     if (themeIndex < 0 || themeIndex >= kThemeNames.length) themeIndex = 0;
-    fontScale = prefs.getDouble('font_scale') ?? 1.0;
-    if (fontScale < 0.5) fontScale = 0.5;
-    if (fontScale > 1.5) fontScale = 1.5;
+    fontScale = snapFontLevel(prefs.getDouble('font_scale') ?? 1.0);
     version = prefs.getString('biblia_version') ?? 'ara';
     if (!kVersionOrder.contains(version)) version = 'ara';
     redLetterEnabled = prefs.getBool('red_letter_enabled') ?? false;

@@ -139,3 +139,20 @@ int fontLevelIndex(double scale) {
   }
   return 1;
 }
+
+/// Encaixa uma escala salva no nível mais próximo de [kFontLevels]. Assim o
+/// slider e o rótulo refletem sempre o valor efetivo, mesmo quando a escala
+/// vem de uma versão antiga (migração do app nativo) e não bate exata com
+/// nenhum nível da tabela.
+double snapFontLevel(double scale) {
+  var best = kFontLevels.first;
+  var bestDiff = (scale - best).abs();
+  for (final level in kFontLevels.skip(1)) {
+    final diff = (scale - level).abs();
+    if (diff < bestDiff) {
+      best = level;
+      bestDiff = diff;
+    }
+  }
+  return best;
+}

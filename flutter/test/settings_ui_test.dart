@@ -50,8 +50,8 @@ void main() {
     expect(checkInThemeRow('Marrom'), findsOneWidget);
     expect(checkInThemeRow('Claro'), findsNothing);
     expect(
-      find.byWidgetPredicate((w) =>
-          w is Container && w.color == kMarrom.bg),
+      find.byWidgetPredicate(
+          (w) => w is ColoredBox && w.color == kMarrom.bg),
       findsWidgets,
     );
   });
@@ -69,7 +69,7 @@ void main() {
     expect(checkInThemeRow('Verde'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
-          (w) => w is Container && w.color == kVerde.bg),
+          (w) => w is ColoredBox && w.color == kVerde.bg),
       findsWidgets,
     );
   });

@@ -20,7 +20,10 @@ void main() {
 
   test('temas e níveis de fonte definidos', () {
     expect(kThemes.length, 4);
-    expect(kThemeNames.length, kThemes.length);
+    // kThemeNames tem um item a mais: "Sistema", que não tem paleta própria
+    // em kThemes (resolve para claro/escuro conforme o brilho do aparelho).
+    expect(kThemeNames.length, kThemes.length + 1);
+    expect(kSystemThemeIndex, kThemes.length);
     for (var i = 0; i < kThemes.length; i++) {
       expect(themeForIndex(i), kThemes[i]);
       expect(kThemeNames[i], isNotEmpty);

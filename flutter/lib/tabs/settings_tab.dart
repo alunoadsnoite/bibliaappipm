@@ -69,11 +69,26 @@ class SettingsTab extends StatelessWidget {
             ),
             Row(
               children: [
-                for (final n in kFontLevelNames)
+                for (var i = 0; i < kFontLevelNames.length; i++)
                   Expanded(
-                    child: Text(n,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: t.muted, fontSize: 12)),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => state.setFontScale(kFontLevels[i]),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          kFontLevelNames[i],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: i == level ? t.accent : t.muted,
+                            fontSize: 12,
+                            fontWeight: i == level
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -524,9 +539,9 @@ class SettingsTab extends StatelessWidget {
   Widget _themeRow(BuildContext context, int index) {
     final t = appTheme;
     final chosen = AppState.i.themeIndex;
-    final effective =
-        effectiveThemeIndex(chosen, AppState.i.systemBrightness);
-    final selected = effective == index;
+    // O visto marca a opção ESCOLHIDA pelo usuário. No tema "Sistema" o selo
+    // AUTO já indica que o tema efetivo (claro/escuro) segue o aparelho.
+    final selected = chosen == index;
     final isSystemMode = chosen == kSystemThemeIndex;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -547,7 +562,8 @@ class SettingsTab extends StatelessWidget {
                   child: Text(kThemeNames[index],
                       style: TextStyle(color: t.text, fontSize: 15)),
                 ),
-                if (index == kSystemThemeIndex && isSystemMode)
+                if (index == kSystemThemeIndex && isSystemMode) ...[
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
@@ -564,9 +580,12 @@ class SettingsTab extends StatelessWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
-                  )
-                else if (selected)
+                  ),
+                ],
+                if (selected) ...[
+                  const SizedBox(width: 8),
                   Icon(Icons.check, color: t.accent, size: 20),
+                ],
               ],
             ),
           ),

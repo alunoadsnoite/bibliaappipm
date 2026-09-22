@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **5.2.0**
+> Nome do projeto: **BibliaApp** · versão atual: **5.2.2**
 
 ## Funcionalidades
 
@@ -171,6 +171,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 5.0.4 | **Leitura contínua também no modo normal**: deslizar à esquerda/direita troca de capítulo (cruzando livros) e, ao chegar ao fim do texto, o próximo capítulo entra automaticamente — como no modo leitura |
 | 5.1.0 | **Letras vermelhas**: falas de Jesus e de Deus destacadas em vermelho em toda a Bíblia (AT e NT), com opção de ativar/desativar nas Configurações |
 | 5.2.0 | **Tema "Sistema"** (configurações): acompanha automaticamente o tema claro/escuro do aparelho; o visto agora segue o tema exibido (com selo AUTO no Sistema); **atalho claro/escuro na leitura**: botão sol/lua na barra do capítulo e no modo leitura, restaura o tema salvo ao sair; **busca destacando o termo encontrado** em negrito; análise estática sem pendências |
+| 5.2.2 | **Configurações voltam a reagir às mudanças**: as abas eram `const` no `IndexedStack` e o Flutter pulava a reconstrução delas — o **visto do tema e o slider do tamanho da letra travavam** no valor inicial (regressão da correção da v4.2.1); **rótulos do tamanho da letra clicáveis** (Pequeno/Normal/Grande/Extra grande) com o nível ativo em destaque; **o visto marca a opção escolhida** (o selo AUTO continua no tema Sistema) e qualquer linha tocada é aplicada; escala de fonte salva é **encaixada no nível mais próximo**; testes atualizados para o tema Sistema e suíte verde |
 
 ## Repositório
 
