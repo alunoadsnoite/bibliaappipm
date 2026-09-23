@@ -68,7 +68,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             }
         }
         
-        // Fallback: calcula localmente se não há dados salvos ou data não bate
+        // Fallback: mostra referência calculada localmente + mensagem para abrir o app
         return getFallbackVerse(context)
     }
 
@@ -79,9 +79,9 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val (bookIdx, chapterIdx, verseIdx) = calculateDailyVerse()
         val ref = formatReference(version, bookIdx, chapterIdx, verseIdx)
         
-        // Tenta carregar do asset como último recurso (pode falhar se não estiver no Android assets)
+        // Tenta carregar do asset (pode falhar se não estiver no Android assets)
         val verseText = tryLoadFromAsset(context, version, bookIdx, chapterIdx, verseIdx)
-            ?: "Versículo do dia indisponível. Abra o app para atualizar."
+            ?: "Toque para abrir o app e carregar o versículo do dia"
         
         return Pair(verseText, ref)
     }

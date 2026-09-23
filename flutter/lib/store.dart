@@ -37,6 +37,8 @@ const int kMaxRecent = 6;
 
 const MethodChannel _migrationChannel =
     MethodChannel('br.com.valdenor.bibliaapp/migration');
+const MethodChannel _widgetChannel =
+    MethodChannel('br.com.valdenor.bibliaapp/widget');
 
 /// Decodifica o JSON de uma Bíblia em um isolate separado, para não travar a
 /// interface na leitura de arquivos grandes (ex.: 4 MB por tradução).
@@ -146,6 +148,19 @@ class AppState extends ChangeNotifier {
 
     loaded = true;
     notifyListeners();
+
+    _widgetChannel.setMethodCallHandler(_handleWidgetCall);
+  }
+
+  Future<dynamic> _handleWidgetCall(MethodCall call) async {
+    if (call.method == 'getDailyVerse') {
+      final today = DateTime.now();
+      final (book, chapter, verse) = dailyVerseFor(today);
+      final verseText = bible[book].chapters[chapter][verse];
+      final ref = formatRef(bible, book, chapter, verse);
+      return {'text': verseText, 'ref': ref, 'date': today.toIso8601String().split('T')[0]};
+    }
+    return null;
   }
 
   /// Migra, uma única vez, os dados do app nativo Android (v4.0 e anteriores)
