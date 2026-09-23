@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models.dart';
 import 'theme.dart';
+import 'daily.dart';
 
 const List<String> kVersionOrder = ['ara', 'nvi', 'ntlh', 'jfaal', 'bkj'];
 const List<String> kVersionNames = [
@@ -121,6 +122,7 @@ class AppState extends ChangeNotifier {
 
     // Carrega apenas a tradução ativa; as demais entram sob demanda.
     bible = await _ensureBible(version);
+    await _saveDailyVerse();
 
     final hymnJson = jsonDecode(await rootBundle.loadString('assets/hinos.json'))
         as List<dynamic>;
@@ -457,7 +459,19 @@ class AppState extends ChangeNotifier {
     version = code;
     bible = await _ensureBible(code);
     await prefs.setString('biblia_version', code);
+    await _saveDailyVerse();
     notifyListeners();
+  }
+
+  /// Salva o versículo do dia no SharedPreferences para o widget ler.
+  Future<void> _saveDailyVerse() async {
+    final today = DateTime.now();
+    final (book, chapter, verse) = dailyVerseFor(today);
+    final verseText = bible[book].chapters[chapter][verse];
+    final ref = formatRef(bible, book, chapter, verse);
+    await prefs.setString('daily_verse_text', verseText);
+    await prefs.setString('daily_verse_ref', ref);
+    await prefs.setString('daily_verse_date', today.toIso8601String().split('T')[0]);
   }
 
   // ------------------------------------------------------------- posição

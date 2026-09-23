@@ -6,15 +6,14 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.widget.RemoteViews
-import com.google.gson.Gson
-import java.io.InputStream
-import java.io.InputStreamReader
 import java.util.Calendar
 
 class DailyVerseWidgetProvider : AppWidgetProvider() {
 
     private val PREFS_NAME = "flutter_shared_preferences"
-    private val VERSION_KEY = "biblia_version"
+    private val VERSE_TEXT_KEY = "daily_verse_text"
+    private val VERSE_REF_KEY = "daily_verse_ref"
+    private val VERSE_DATE_KEY = "daily_verse_date"
     private val WIDGET_CHANNEL = "br.com.valdenor.bibliaapp/widget"
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -56,22 +55,71 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
 
     private fun getDailyVerse(context: Context): Pair<String, String> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val version = prefs.getString(VERSION_KEY, "ara") ?: "ara"
-
-        val assetName = when (version) {
-            "ara" -> "assets/biblia_ara.json"
-            "nvi" -> "assets/biblia_nvi.json"
-            "ntlh" -> "assets/biblia_ntlh.json"
-            "jfaal" -> "assets/biblia.json"
-            "bkj" -> "assets/biblia_bkj.json"
-            else -> "assets/biblia.json"
+        
+        // Tenta ler o versículo salvo pelo Flutter
+        val savedDate = prefs.getString(VERSE_DATE_KEY, "") ?: ""
+        val today = java.time.LocalDate.now().toString() // formato YYYY-MM-DD
+        
+        if (savedDate == today) {
+            val verseText = prefs.getString(VERSE_TEXT_KEY, "") ?: ""
+            val verseRef = prefs.getString(VERSE_REF_KEY, "") ?: ""
+            if (verseText.isNotEmpty() && verseRef.isNotEmpty()) {
+                return Pair(verseText, verseRef)
+            }
         }
+        
+        // Fallback: calcula localmente se não há dados salvos ou data não bate
+        return getFallbackVerse(context)
+    }
 
+    private fun getFallbackVerse(context: Context): Pair<String, String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val version = prefs.getString("biblia_version", "ara") ?: "ara"
+        
         val (bookIdx, chapterIdx, verseIdx) = calculateDailyVerse()
-        val verse = loadVerseFromAsset(context, assetName, bookIdx, chapterIdx, verseIdx)
         val ref = formatReference(version, bookIdx, chapterIdx, verseIdx)
+        
+        // Tenta carregar do asset como último recurso (pode falhar se não estiver no Android assets)
+        val verseText = tryLoadFromAsset(context, version, bookIdx, chapterIdx, verseIdx)
+            ?: "Versículo do dia indisponível. Abra o app para atualizar."
+        
+        return Pair(verseText, ref)
+    }
 
-        return Pair(verse, ref)
+    private fun tryLoadFromAsset(
+        context: Context,
+        version: String,
+        bookIdx: Int,
+        chapterIdx: Int,
+        verseIdx: Int
+    ): String? {
+        val assetName = when (version) {
+            "ara" -> "biblia_ara.json"
+            "nvi" -> "biblia_nvi.json"
+            "ntlh" -> "biblia_ntlh.json"
+            "jfaal" -> "biblia.json"
+            "bkj" -> "biblia_bkj.json"
+            else -> "biblia.json"
+        }
+        
+        return try {
+            val inputStream = context.assets.open(assetName)
+            val reader = java.io.InputStreamReader(inputStream)
+            val books = com.google.gson.Gson().fromJson(reader, Array<Book>::class.java)
+            reader.close()
+            
+            if (bookIdx < books.size) {
+                val book = books[bookIdx]
+                if (chapterIdx < book.chapters.size) {
+                    val chapter = book.chapters[chapterIdx]
+                    if (verseIdx < chapter.size) {
+                        chapter[verseIdx]
+                    } else null
+                } else null
+            } else null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun calculateDailyVerse(): Triple<Int, Int, Int> {
@@ -124,33 +172,6 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val cal = Calendar.getInstance()
         val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
         return dailyVerses[dayOfYear % dailyVerses.size]
-    }
-
-    private fun loadVerseFromAsset(
-        context: Context,
-        assetName: String,
-        bookIdx: Int,
-        chapterIdx: Int,
-        verseIdx: Int
-    ): String {
-        return try {
-            val inputStream: InputStream = context.assets.open(assetName)
-            val reader = InputStreamReader(inputStream)
-            val books = Gson().fromJson(reader, Array<Book>::class.java)
-            reader.close()
-
-            if (bookIdx < books.size) {
-                val book = books[bookIdx]
-                if (chapterIdx < book.chapters.size) {
-                    val chapter = book.chapters[chapterIdx]
-                    if (verseIdx < chapter.size) {
-                        chapter[verseIdx]
-                    } else "Versículo não encontrado"
-                } else "Capítulo não encontrado"
-            } else "Livro não encontrado"
-        } catch (e: Exception) {
-            "Erro ao carregar versículo"
-        }
     }
 
     private fun formatReference(version: String, bookIdx: Int, chapterIdx: Int, verseIdx: Int): String {
