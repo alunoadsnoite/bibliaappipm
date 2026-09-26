@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **5.2.3**
+> Nome do projeto: **BibliaApp** · versão atual: **5.2.5**
 
 ## Funcionalidades
 
@@ -173,6 +173,8 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 | 5.1.0 | **Letras vermelhas**: falas de Jesus e de Deus destacadas em vermelho em toda a Bíblia (AT e NT), com opção de ativar/desativar nas Configurações |
 | 5.2.0 | **Tema "Sistema"** (configurações): acompanha automaticamente o tema claro/escuro do aparelho; o visto agora segue o tema exibido (com selo AUTO no Sistema); **atalho claro/escuro na leitura**: botão sol/lua na barra do capítulo e no modo leitura, restaura o tema salvo ao sair; **busca destacando o termo encontrado** em negrito; análise estática sem pendências |
 | 5.2.3 | **Widget Android** com versículo do dia na tela inicial; atualização diária automática e ao mudar de data; sincronização via SharedPreferences com o app Flutter; fallback inteligente quando app não foi aberto ainda (mostra referência + mensagem para tocar e carregar); clique no widget abre o app |
+| 5.2.4 | **Correção do widget Android**: o texto do versículo do dia agora é sempre exibido, mesmo sem conexão com o app Flutter; adicionados textos fallback hardcoded para os 43 versículos diários |
+| 5.2.5 | **Versículo do dia com ~90 versículos**: lista expandida de 43 para ~90 versículos diários, reduzindo a repetição de ~8-9x para ~4x por ano (ciclo de ~90 dias em vez de ~43 dias); widget Android sincronizado com a mesma lista expandida |
 | 5.2.2 | **Configurações voltam a reagir às mudanças**: as abas eram `const` no `IndexedStack` e o Flutter pulava a reconstrução delas — o **visto do tema e o slider do tamanho da letra travavam** no valor inicial (regressão da correção da v4.2.1); **rótulos do tamanho da letra clicáveis** (Pequeno/Normal/Grande/Extra grande) com o nível ativo em destaque; **o visto marca a opção escolhida** (o selo AUTO continua no tema Sistema) e qualquer linha tocada é aplicada; escala de fonte salva é **encaixada no nível mais próximo**; testes atualizados para o tema Sistema e suíte verde |
 
 ## Repositório

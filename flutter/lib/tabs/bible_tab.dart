@@ -41,12 +41,36 @@ const List<_Group> _kGroups = [
   _Group('Sapenciais', [19, 20]),
   _Group('Proféticos Maiores', [22, 23, 24, 25, 26]),
   _Group('Proféticos Menores', [
-    27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
   ]),
   _Group('Evangelhos', [39, 40, 41, 42]),
   _Group('Atos dos Apóstolos', [43]),
   _Group('Cartas Paulinas', [
-    44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
   ]),
   _Group('Cartas Gerais', [58, 59, 60, 61, 62, 63, 64]),
   _Group('Revelação', [65]),
@@ -66,8 +90,9 @@ String _normalize(String s) {
 /// Tenta interpretar `text` como uma referência bíblica ("Jo 3:16",
 /// "Salmos 23", "1co13"). Retorna `null` se não for uma referência válida.
 ParsedRef? parseReference(List<Book> books, String text) {
-  final m = RegExp(r'^([0-9]{0,2}[A-Za-zÀ-ú]{1,10})\s*(\d{1,3})(?::(\d{1,3}))?$')
-      .firstMatch(text.trim());
+  final m = RegExp(
+    r'^([0-9]{0,2}[A-Za-zÀ-ú]{1,10})\s*(\d{1,3})(?::(\d{1,3}))?$',
+  ).firstMatch(text.trim());
   if (m == null) return null;
   final token = m.group(1)!;
   final tokenLower = token.toLowerCase();
@@ -144,8 +169,12 @@ List<List<int>> _searchVerses(_SearchArg arg) {
 
 /// Monta um [TextSpan] destacando (com `highlight`) as ocorrências de
 /// `term` em `source`, ignorando maiúsculas/minúsculas.
-TextSpan _highlightMatches(String source, String term, TextStyle base,
-    TextStyle highlight) {
+TextSpan _highlightMatches(
+  String source,
+  String term,
+  TextStyle base,
+  TextStyle highlight,
+) {
   if (term.isEmpty) return TextSpan(text: source, style: base);
   final lower = source.toLowerCase();
   final q = term.toLowerCase();
@@ -155,8 +184,9 @@ TextSpan _highlightMatches(String source, String term, TextStyle base,
     final i = lower.indexOf(q, start);
     if (i < 0) break;
     if (i > start) spans.add(TextSpan(text: source.substring(start, i)));
-    spans.add(TextSpan(
-        text: source.substring(i, i + q.length), style: highlight));
+    spans.add(
+      TextSpan(text: source.substring(i, i + q.length), style: highlight),
+    );
     start = i + q.length;
   }
   if (start < source.length) spans.add(TextSpan(text: source.substring(start)));
@@ -178,7 +208,17 @@ class _BibleTabState extends State<BibleTab> {
   int? _bookIndex;
   int? _chapter;
   int? _focusVerse;
-  bool _pendingScroll = false;
+
+  /// Chave do versículo focado, usada para rolar até ele depois do build.
+  final GlobalKey _focusKey = GlobalKey();
+
+  /// Mescla de fase e índice do TTS. Criada uma vez só: `Listenable.merge`
+  /// aloca um notificador novo e (des)registra ouvintes a cada build, e esta
+  /// lista é reconstruída a cada versículo lido.
+  late final Listenable _ttsListenable = Listenable.merge([
+    TtsService.i.phase,
+    TtsService.i.index,
+  ]);
   bool _focusMode = false;
   bool _immersive = false;
   bool _selMode = false;
@@ -257,8 +297,11 @@ class _BibleTabState extends State<BibleTab> {
   }
 
   /// Brilho efetivo do tema exibido (considerando o atalho de leitura).
-  bool get _isDarkNow => effectiveThemeIndex(
-          AppState.i.displayedThemeIndex, AppState.i.systemBrightness) ==
+  bool get _isDarkNow =>
+      effectiveThemeIndex(
+        AppState.i.displayedThemeIndex,
+        AppState.i.systemBrightness,
+      ) ==
       1;
 
   /// Alterna temporariamente entre claro e escuro no modo leitura.
@@ -271,7 +314,6 @@ class _BibleTabState extends State<BibleTab> {
       _bookIndex = index;
       _chapter = null;
       _focusVerse = null;
-      _pendingScroll = false;
     });
   }
 
@@ -281,7 +323,6 @@ class _BibleTabState extends State<BibleTab> {
     setState(() {
       _chapter = chapter;
       _focusVerse = null;
-      _pendingScroll = false;
       _resetSelection();
     });
     AppState.i.savePosition(bookIndex, chapter);
@@ -315,7 +356,6 @@ class _BibleTabState extends State<BibleTab> {
       _bookIndex = book;
       _chapter = chapter;
       _focusVerse = null;
-      _pendingScroll = false;
       _resetSelection();
     });
     AppState.i.savePosition(book, chapter);
@@ -350,13 +390,31 @@ class _BibleTabState extends State<BibleTab> {
       _bookIndex = book;
       _chapter = chapter;
       _focusVerse = verse;
-      _pendingScroll = true;
       _results = null;
       _searching = false;
       _search.clear();
     });
     AppState.i.savePosition(book, chapter);
     AppState.i.addRecent(book, chapter);
+    _scrollToFocusVerse();
+  }
+
+  /// Rola até o versículo focado. O agendamento sai daqui, e não de dentro do
+  /// `itemBuilder`: zerar uma flag de estado durante o build (como o código
+  /// anterior fazia) só funcionava por acaso, porque os itens seguintes liam
+  /// o valor novo no mesmo passe.
+  void _scrollToFocusVerse() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _focusKey.currentContext;
+      if (ctx != null && ctx.mounted) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 400),
+          alignment: 0.15,
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   // ------------------------------------------------ busca (texto e referência)
@@ -409,9 +467,13 @@ class _BibleTabState extends State<BibleTab> {
       _searching = true;
     });
     final res = await compute(
-        _searchVerses,
-        _SearchArg(List.of(AppState.i.bible), query,
-            _searchBookOnly ? _bookIndex : null));
+      _searchVerses,
+      _SearchArg(
+        List.of(AppState.i.bible),
+        query,
+        _searchBookOnly ? _bookIndex : null,
+      ),
+    );
     if (!mounted || myJob != _job) return;
     setState(() {
       _results = res;
@@ -447,7 +509,6 @@ class _BibleTabState extends State<BibleTab> {
     setState(() {
       _bookIndex = next.$1;
       _chapter = null;
-      _pendingScroll = false;
       _searchBookOnly = false;
     });
     _goToChapter(next.$2);
@@ -472,53 +533,66 @@ class _BibleTabState extends State<BibleTab> {
                   children: [
                     if (_bookIndex != null || _results != null)
                       IconButton(
-                        icon: Icon(Icons.arrow_back_ios_new,
-                            size: 20, color: t.primary),
+                        icon: Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 20,
+                          color: t.primary,
+                        ),
                         onPressed: _back,
                       ),
                     Expanded(
-                      child: Text(_title,
-                          style: TextStyle(
-                              color: t.text,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        _title,
+                        style: TextStyle(
+                          color: t.text,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     if (_results == null)
                       GestureDetector(
                         onTap: _showVersionDialog,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 5),
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             color: t.light,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(_versionLabel,
-                              style: TextStyle(
-                                  color: t.text,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold)),
+                          child: Text(
+                            _versionLabel,
+                            style: TextStyle(
+                              color: t.text,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
-                    if (_bookIndex != null && _chapter != null && _results == null)
+                    if (_bookIndex != null &&
+                        _chapter != null &&
+                        _results == null)
                       IconButton(
-                        icon: const Icon(Icons.fullscreen,
-                            size: 18),
+                        icon: const Icon(Icons.fullscreen, size: 18),
                         color: t.primary,
                         tooltip: 'Modo leitura',
                         onPressed: () {
                           setState(() => _focusMode = true);
-                          AppState.i
-                              .markChapterRead(_bookIndex!, _chapter!);
+                          AppState.i.markChapterRead(_bookIndex!, _chapter!);
                         },
                       ),
                     if (_bookIndex != null && _results == null)
                       IconButton(
-                        icon: Icon(_searchBookOnly
-                            ? Icons.filter_alt
-                            : Icons.filter_alt_off,
-                            size: 18),
+                        icon: Icon(
+                          _searchBookOnly
+                              ? Icons.filter_alt
+                              : Icons.filter_alt_off,
+                          size: 18,
+                        ),
                         color: _searchBookOnly ? t.accent : t.primary,
                         tooltip: _searchBookOnly && _book != null
                             ? 'Buscar em ${_book!.name}'
@@ -539,7 +613,9 @@ class _BibleTabState extends State<BibleTab> {
                           filled: true,
                           fillColor: t.light,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -560,14 +636,14 @@ class _BibleTabState extends State<BibleTab> {
   Widget _body() {
     final t = appTheme;
     if (_loadingVersion) {
-      return Center(
-        child: CircularProgressIndicator(color: t.accent),
-      );
+      return Center(child: CircularProgressIndicator(color: t.accent));
     }
     if (_searching) {
       return Center(
-        child: Text('Buscando…',
-            style: TextStyle(color: t.muted, fontSize: 15)),
+        child: Text(
+          'Buscando…',
+          style: TextStyle(color: t.muted, fontSize: 15),
+        ),
       );
     }
     if (_results != null) return _resultsView();
@@ -589,8 +665,9 @@ class _BibleTabState extends State<BibleTab> {
     ];
     String? lastTestament;
     for (var g in _kGroups) {
-      final testamento =
-          g.indices.first >= 39 ? 'NOVO TESTAMENTO' : 'ANTIGO TESTAMENTO';
+      final testamento = g.indices.first >= 39
+          ? 'NOVO TESTAMENTO'
+          : 'ANTIGO TESTAMENTO';
       if (testamento != lastTestament) {
         children.add(_section(testamento));
         lastTestament = testamento;
@@ -613,9 +690,14 @@ class _BibleTabState extends State<BibleTab> {
     final t = appTheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-      child: Text(label,
-          style: TextStyle(
-              color: t.primary, fontSize: 13, fontWeight: FontWeight.bold)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: t.primary,
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -623,9 +705,14 @@ class _BibleTabState extends State<BibleTab> {
     final t = appTheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 10, 4, 2),
-      child: Text(label,
-          style: TextStyle(
-              color: t.accentDark, fontSize: 12, fontWeight: FontWeight.bold)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: t.accentDark,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -644,19 +731,26 @@ class _BibleTabState extends State<BibleTab> {
             child: Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: t.light,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text('${index + 1}',
-                      style: TextStyle(color: t.muted, fontSize: 13)),
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(color: t.muted, fontSize: 13),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: Text(b.name,
-                        style: TextStyle(color: t.text, fontSize: 16))),
+                  child: Text(
+                    b.name,
+                    style: TextStyle(color: t.text, fontSize: 16),
+                  ),
+                ),
                 Icon(Icons.chevron_right, color: t.muted),
               ],
             ),
@@ -694,11 +788,15 @@ class _BibleTabState extends State<BibleTab> {
                 Icon(Icons.history, color: t.accent, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: Text(label,
-                        style: TextStyle(
-                            color: t.text,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold))),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: t.text,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
                 Icon(Icons.chevron_right, color: t.muted),
               ],
             ),
@@ -738,23 +836,34 @@ class _BibleTabState extends State<BibleTab> {
                   children: [
                     Icon(Icons.wb_sunny, color: Colors.white, size: 16),
                     SizedBox(width: 6),
-                    Text('VERSÍCULO DO DIA',
-                        style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold)),
+                    Text(
+                      'VERSÍCULO DO DIA',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(text,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 16, height: 1.4)),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    height: 1.4,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(ref,
-                    style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
+                Text(
+                  ref,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -789,17 +898,25 @@ class _BibleTabState extends State<BibleTab> {
             children: [
               Row(
                 children: [
-                  Icon(doneToday ? Icons.check_circle : Icons.timeline,
-                      color: t.accent, size: 18),
+                  Icon(
+                    doneToday ? Icons.check_circle : Icons.timeline,
+                    color: t.accent,
+                    size: 18,
+                  ),
                   const SizedBox(width: 6),
-                  Text('Plano de leitura',
-                      style: TextStyle(
-                          color: t.text,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    'Plano de leitura',
+                    style: TextStyle(
+                      color: t.text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const Spacer(),
-                  Text('Hoje $today/$daily',
-                      style: TextStyle(color: t.accent, fontSize: 12)),
+                  Text(
+                    'Hoje $today/$daily',
+                    style: TextStyle(color: t.accent, fontSize: 12),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -821,8 +938,11 @@ class _BibleTabState extends State<BibleTab> {
                       style: TextStyle(color: t.muted, fontSize: 12),
                     ),
                   ),
-                  Icon(Icons.local_fire_department,
-                      color: streak > 0 ? t.accent : t.muted, size: 16),
+                  Icon(
+                    Icons.local_fire_department,
+                    color: streak > 0 ? t.accent : t.muted,
+                    size: 16,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     streak == 1
@@ -855,9 +975,7 @@ class _BibleTabState extends State<BibleTab> {
     final bible = state.bible;
     final t = appTheme;
     if (state.recent.isEmpty) return const [];
-    final children = <Widget>[
-      _section('Recentes'),
-    ];
+    final children = <Widget>[_section('Recentes')];
     for (var i = 0; i < state.recent.length; i++) {
       final r = state.recent[i];
       if (r.book >= bible.length) continue;
@@ -878,19 +996,27 @@ class _BibleTabState extends State<BibleTab> {
               },
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Row(
                   children: [
-                    Icon(Icons.history,
-                        size: 18,
-                        color: sameVersion ? t.accent : t.muted),
+                    Icon(
+                      Icons.history,
+                      size: 18,
+                      color: sameVersion ? t.accent : t.muted,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
-                        child: Text(title,
-                            style: TextStyle(
-                                color: t.text,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500))),
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: t.text,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                     IconButton(
                       icon: Icon(Icons.close, color: t.muted, size: 16),
                       visualDensity: VisualDensity.compact,
@@ -938,10 +1064,13 @@ class _BibleTabState extends State<BibleTab> {
               }
             },
             child: Center(
-              child: Text('${i + 1}',
-                  style: TextStyle(
-                      color: read ? Colors.white : t.text,
-                      fontSize: 14)),
+              child: Text(
+                '${i + 1}',
+                style: TextStyle(
+                  color: read ? Colors.white : t.text,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ),
         );
@@ -978,15 +1107,15 @@ class _BibleTabState extends State<BibleTab> {
                 child: Text(
                   'Capítulo ${chapter + 1} de ${b.chapters.length}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 13),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
                 ),
               ),
               IconButton(
                 icon: Icon(
-                    _isDarkNow ? Icons.light_mode : Icons.dark_mode,
-                    color: Colors.white,
-                    size: 20),
+                  _isDarkNow ? Icons.light_mode : Icons.dark_mode,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 tooltip: 'Alternar claro/escuro',
                 onPressed: _toggleTheme,
               ),
@@ -1028,12 +1157,7 @@ class _BibleTabState extends State<BibleTab> {
         ),
       ],
     );
-    return Stack(
-      children: [
-        view,
-        if (_selMode) _selectionBar(),
-      ],
-    );
+    return Stack(children: [view, if (_selMode) _selectionBar()]);
   }
 
   Widget _focusView() {
@@ -1093,8 +1217,7 @@ class _BibleTabState extends State<BibleTab> {
                   heroTag: 'theme_focus',
                   tooltip: 'Alternar claro/escuro',
                   onPressed: _toggleTheme,
-                  child: Icon(
-                      _isDarkNow ? Icons.light_mode : Icons.dark_mode),
+                  child: Icon(_isDarkNow ? Icons.light_mode : Icons.dark_mode),
                 ),
               ),
             ),
@@ -1144,45 +1267,43 @@ class _BibleTabState extends State<BibleTab> {
 
   Widget _verseList(List<String> verses, {required bool focusMode}) {
     return ListenableBuilder(
-      listenable: Listenable.merge([TtsService.i.phase, TtsService.i.index]),
+      listenable: _ttsListenable,
       builder: (context, _) {
         final readingIndex = TtsService.i.index.value;
         return ListView.builder(
           controller: _chapterScroll,
           padding: EdgeInsets.fromLTRB(
-              focusMode ? 20 : 4, focusMode ? 28 : 4, focusMode ? 20 : 4, 80),
+            focusMode ? 20 : 4,
+            focusMode ? 28 : 4,
+            focusMode ? 20 : 4,
+            80,
+          ),
           itemCount: verses.length,
           itemBuilder: (context, v) {
-            final row = _verseRow(verses, v, readingIndex, focusMode,
-                immersive: focusMode && _immersive);
-            if (focusMode || !_pendingScroll || _focusVerse != v) return row;
-            final targetCtx = context;
-            return Builder(
-              builder: (ctx) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final ro =
-                      targetCtx.findRenderObject() ?? ctx.findRenderObject();
-                  if (ro != null && ro is RenderBox && ro.hasSize) {
-                    Scrollable.ensureVisible(
-                      targetCtx,
-                      duration: const Duration(milliseconds: 400),
-                      alignment: 0.15,
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                });
-                _pendingScroll = false;
-                return row;
-              },
+            final row = _verseRow(
+              verses,
+              v,
+              readingIndex,
+              focusMode,
+              immersive: focusMode && _immersive,
             );
+            // Só o versículo focado recebe a GlobalKey; o scroll para ele é
+            // agendado em `_openVerse`, sem mexer em estado durante o build.
+            if (focusMode || _focusVerse != v) return row;
+            return KeyedSubtree(key: _focusKey, child: row);
           },
         );
       },
     );
   }
 
-Widget _verseRow(List<String> verses, int v, int? readingIndex,
-    bool focusMode, {bool immersive = false}) {
+  Widget _verseRow(
+    List<String> verses,
+    int v,
+    int? readingIndex,
+    bool focusMode, {
+    bool immersive = false,
+  }) {
     final t = appTheme;
     final b = _book!;
     final chapter = _chapter!;
@@ -1195,20 +1316,16 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
     return GestureDetector(
       onTap: immersive
           ? null
-          : (_selMode
-              ? () => _toggleSelect(v)
-              : () => _verseMenu(verses, v)),
+          : (_selMode ? () => _toggleSelect(v) : () => _verseMenu(verses, v)),
       onLongPress: immersive
           ? null
-          : (_selMode
-              ? () => _toggleSelect(v)
-              : () => _enterSelect(v)),
+          : (_selMode ? () => _toggleSelect(v) : () => _enterSelect(v)),
       child: Container(
         color: selected
             ? t.primary.withValues(alpha: 0.14)
             : (reading
-                ? t.accent.withValues(alpha: 0.16)
-                : highlightColor(key)),
+                  ? t.accent.withValues(alpha: 0.16)
+                  : highlightColor(key)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1221,39 +1338,50 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Flexible(
-                        child: Text(ref,
-                            style: TextStyle(
-                                color: reading
-                                    ? t.accent
-                                    : t.accentDark,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold)),
+                        child: Text(
+                          ref,
+                          style: TextStyle(
+                            color: reading ? t.accent : t.accentDark,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       if (hasNote)
                         Padding(
                           padding: const EdgeInsets.only(left: 6),
-                          child: Icon(Icons.sticky_note_2,
-                              color: t.muted, size: 13),
+                          child: Icon(
+                            Icons.sticky_note_2,
+                            color: t.muted,
+                            size: 13,
+                          ),
                         ),
                     ],
                   ),
-                  Text(verses[v],
-                      style: TextStyle(
-                          color: AppState.i.redLetterEnabled &&
-                                  AppState.i.isRedLetter(
-                                      _bookIndex!, chapter, v)
-                              ? t.redText
-                              : t.text,
-                          fontSize: focusMode ? 18 : 16,
-                          height: 1.4)),
+                  const SizedBox(height: 4),
+                  Text(
+                    verses[v],
+                    style: TextStyle(
+                      color:
+                          AppState.i.redLetterEnabled &&
+                              AppState.i.isRedLetter(_bookIndex!, chapter, v)
+                          ? t.redText
+                          : t.text,
+                      fontSize: focusMode ? 18 : 16,
+                      height: 1.4,
+                    ),
+                  ),
                   if (hasNote)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(note,
-                          style: TextStyle(
-                              color: t.muted,
-                              fontSize: focusMode ? 15 : 13,
-                              fontStyle: FontStyle.italic)),
+                      child: Text(
+                        note,
+                        style: TextStyle(
+                          color: t.muted,
+                          fontSize: focusMode ? 15 : 13,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -1261,17 +1389,16 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
             if (_selMode)
               Padding(
                 padding: const EdgeInsets.only(top: 6, left: 8),
-                child: Icon(selected
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-                    color: selected ? t.primary : t.muted,
-                    size: 20),
+                child: Icon(
+                  selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: selected ? t.primary : t.muted,
+                  size: 20,
+                ),
               )
             else if (reading && !immersive)
               Padding(
                 padding: const EdgeInsets.only(top: 6, left: 4),
-                child: Icon(Icons.volume_up,
-                    color: t.accent, size: 18),
+                child: Icon(Icons.volume_up, color: t.accent, size: 18),
               ),
           ],
         ),
@@ -1382,7 +1509,9 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
   }
 
   Future<void> _noteSel() async {
-    final notes = [for (final (v, _) in _selItems) AppState.i.getNote(_selKey(v)) ?? ''];
+    final notes = [
+      for (final (v, _) in _selItems) AppState.i.getNote(_selKey(v)) ?? '',
+    ];
     final common = notes.isNotEmpty && notes.every((s) => s == notes.first)
         ? notes.first
         : '';
@@ -1398,7 +1527,9 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
     final t = appTheme;
     final ch = _chapter!;
     final firstH = AppState.i.getHighlight(_selKey(_sel.first));
-    final same = _sel.every((v) => AppState.i.getHighlight(_selKey(v)) == firstH);
+    final same = _sel.every(
+      (v) => AppState.i.getHighlight(_selKey(v)) == firstH,
+    );
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: t.card,
@@ -1414,11 +1545,14 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Destaque ${_sel.length} versículo(s) — capítulo ${ch + 1}',
-                    style: TextStyle(
-                        color: t.text,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold)),
+                Text(
+                  'Destaque ${_sel.length} versículo(s) — capítulo ${ch + 1}',
+                  style: TextStyle(
+                    color: t.text,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 14),
                 Wrap(
                   spacing: 12,
@@ -1440,8 +1574,7 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                             color: kHighlightColors[i],
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color:
-                                  current == i ? t.primary : Colors.black12,
+                              color: current == i ? t.primary : Colors.black12,
                               width: current == i ? 3 : 1,
                             ),
                           ),
@@ -1463,8 +1596,11 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.black12),
                         ),
-                        child: Icon(Icons.format_color_reset,
-                            size: 20, color: t.muted),
+                        child: Icon(
+                          Icons.format_color_reset,
+                          size: 20,
+                          color: t.muted,
+                        ),
                       ),
                     ),
                   ],
@@ -1499,8 +1635,10 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                   visualDensity: VisualDensity.compact,
                   onPressed: _leaveSelect,
                 ),
-                Text('${_sel.length} selec.',
-                    style: TextStyle(color: t.text, fontSize: 13)),
+                Text(
+                  '${_sel.length} selec.',
+                  style: TextStyle(color: t.text, fontSize: 13),
+                ),
                 const SizedBox(width: 6),
                 IconButton(
                   icon: const Icon(Icons.select_all, size: 20),
@@ -1553,7 +1691,8 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
     final key = 'v:${_bookIndex!}:${chapter + 1}:${v + 1}';
     // Referência falada: nome completo e "capítulo/versículo" por extenso,
     // para o TTS não ler "8:15" como horário ("oito e quinze da manhã").
-    final spoken = '${b.name}, capítulo ${chapter + 1}, '
+    final spoken =
+        '${b.name}, capítulo ${chapter + 1}, '
         'versículo ${v + 1}. ${verses[v]}';
     return showLineMenu(
       context,
@@ -1564,8 +1703,12 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
       onHighlightChanged: (_) => setState(() {}),
       onNoteChanged: (_) => setState(() {}),
       speakText: spoken,
-      onCompare: () =>
-          _showComparison(bAbbr: b.abbr, book: _bookIndex!, chapter: chapter, verse: v),
+      onCompare: () => _showComparison(
+        bAbbr: b.abbr,
+        book: _bookIndex!,
+        chapter: chapter,
+        verse: v,
+      ),
       onSelect: () => _enterSelect(v),
     );
   }
@@ -1592,9 +1735,11 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('Nenhum resultado para "${_search.text.trim()}"',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: t.muted, fontSize: 15)),
+          child: Text(
+            'Nenhum resultado para "${_search.text.trim()}"',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: t.muted, fontSize: 15),
+          ),
         ),
       );
     }
@@ -1651,15 +1796,22 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         onTap: () => _openVerse(r[0], r[1], r[2]),
-        title: Text(ref,
-            style: TextStyle(
-                color: t.accent,
-                fontSize: 12,
-                fontWeight: FontWeight.bold)),
-        subtitle: Text.rich(_highlightMatches(
-            text, _search.text.trim(),
+        title: Text(
+          ref,
+          style: TextStyle(
+            color: t.accent,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text.rich(
+          _highlightMatches(
+            text,
+            _search.text.trim(),
             TextStyle(color: t.text, fontSize: 15),
-            TextStyle(color: t.accent, fontWeight: FontWeight.bold))),
+            TextStyle(color: t.accent, fontWeight: FontWeight.bold),
+          ),
+        ),
       ),
     );
   }
@@ -1684,10 +1836,11 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                     child: Text(
                       '${kVersionAbbrs[i]} — ${kVersionNames[i]}',
                       style: TextStyle(
-                          color: t.text,
-                          fontWeight: i == current
-                              ? FontWeight.bold
-                              : FontWeight.normal),
+                        color: t.text,
+                        fontWeight: i == current
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
                     ),
                   ),
                   if (i == current)
@@ -1754,11 +1907,14 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Comparação — $ref',
-                  style: TextStyle(
-                      color: t.text,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold)),
+              Text(
+                'Comparação — $ref',
+                style: TextStyle(
+                  color: t.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 10),
               Flexible(
                 child: ListView(
@@ -1775,17 +1931,23 @@ Widget _verseRow(List<String> verses, int v, int? readingIndex,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(rows[i].$1,
-                                style: TextStyle(
-                                    color: t.accent,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
+                            Text(
+                              rows[i].$1,
+                              style: TextStyle(
+                                color: t.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 2),
-                            Text(rows[i].$2,
-                                style: TextStyle(
-                                    color: t.text,
-                                    fontSize: 15,
-                                    height: 1.4)),
+                            Text(
+                              rows[i].$2,
+                              style: TextStyle(
+                                color: t.text,
+                                fontSize: 15,
+                                height: 1.4,
+                              ),
+                            ),
                           ],
                         ),
                       ),
