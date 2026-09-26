@@ -1781,8 +1781,13 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             Triple(65, 169, 5), Triple(65, 169, 6), Triple(65, 169, 7),
             Triple(65, 169, 8), Triple(65, 169, 9), Triple(65, 169, 10),
             Triple(65, 169, 11), Triple(65, 169, 12), Triple(65, 169, 13),
-            Triple(65, 169, 14), Triple(65, 169, 15),</longcat_think>
+            Triple(65, 169, 14), Triple(65, 169, 15)
+        )
 
+        val cal = Calendar.getInstance()
+        val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
+        return dailyVerses[dayOfYear % dailyVerses.size]
+    }
 
     private fun formatReference(version: String, bookIdx: Int, chapterIdx: Int, verseIdx: Int): String {
         val bookAbbrs = mapOf(
