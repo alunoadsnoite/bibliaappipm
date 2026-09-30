@@ -56,10 +56,6 @@ android {
     }
 }
 
-dependencies {
-    implementation("com.google.code.gson:gson:2.10.1")
-}
-
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

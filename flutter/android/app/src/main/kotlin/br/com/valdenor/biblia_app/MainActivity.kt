@@ -8,14 +8,27 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
 
-    private val channel = "br.com.valdenor.bibliaapp/migration"
+    private val migrationChannel = "br.com.valdenor.bibliaapp/migration"
+    private val widgetChannel = "br.com.valdenor.bibliaapp/widget"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, migrationChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "readNativeData" -> result.success(readNativeData())
+                    else -> result.notImplemented()
+                }
+            }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, widgetChannel)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    // O Flutter acabou de salvar o versículo do dia; redesenha o
+                    // widget para não esperar o updatePeriodMillis.
+                    "refreshWidget" -> {
+                        DailyVerseWidgetProvider.refreshAll(this)
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }
