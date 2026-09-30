@@ -11,7 +11,13 @@ import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppState.i.load();
+  try {
+    await AppState.i.load();
+  } catch (error, stack) {
+    // Sem isto, uma falha de leitura deixa a tela preta para sempre, porque
+    // `runApp` nunca seria chamado.
+    debugPrint('Falha ao iniciar: $error\n$stack');
+  }
   runApp(const BibliaApp());
 }
 

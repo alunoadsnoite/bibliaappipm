@@ -194,7 +194,7 @@ class _SongsTabState extends State<SongsTab> {
           else
             _line(
               text: lines[li],
-              key: 's:${AppState.i.songs.indexOf(s)}:$li',
+              key: 's:${AppState.songId(s)}:$li',
             ),
       ],
     );

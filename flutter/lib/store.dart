@@ -5,9 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'daily.dart';
 import 'models.dart';
 import 'theme.dart';
-import 'daily.dart';
 
 const List<String> kVersionOrder = ['ara', 'nvi', 'ntlh', 'jfaal', 'bkj'];
 const List<String> kVersionNames = [
@@ -30,7 +30,7 @@ const String kAppName = 'Bíblia IPM';
 
 /// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
 /// pelo valor real do pacote via [PackageInfo].
-const String kAppVersion = '5.2.2';
+const String kAppVersion = '5.2.5';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -109,7 +109,7 @@ class AppState extends ChangeNotifier {
     if (!kVersionOrder.contains(version)) version = 'ara';
     redLetterEnabled = prefs.getBool('red_letter_enabled') ?? false;
 
-    await _loadRedLetter();
+    await _optional('letras vermelhas', _loadRedLetter);
 
     ttsRate = prefs.getDouble('tts_rate') ?? 0.5;
     ttsPitch = prefs.getDouble('tts_pitch') ?? 1.0;
@@ -124,27 +124,33 @@ class AppState extends ChangeNotifier {
 
     // Carrega apenas a tradução ativa; as demais entram sob demanda.
     bible = await _ensureBible(version);
-    await _saveDailyVerse();
+    await _optional('versículo do dia', _saveDailyVerse);
 
-    final hymnJson = jsonDecode(await rootBundle.loadString('assets/hinos.json'))
-        as List<dynamic>;
-    hymns = hymnJson
-        .map((e) => Hymn.fromJson(e as Map<String, dynamic>))
-        .toList();
+    await _optional('hinário', () async {
+      final hymnJson =
+          jsonDecode(await rootBundle.loadString('assets/hinos.json'))
+              as List<dynamic>;
+      hymns = hymnJson
+          .map((e) => Hymn.fromJson(e as Map<String, dynamic>))
+          .toList();
+    });
 
-    await _loadSongs();
-    await _loadBoletim();
-    _loadNotes();
-    _loadRecent();
-    _loadPlan();
-    await _migrateKeysToCanonical();
+    await _optional('músicas', _loadSongs);
+    await _optional('boletim', _loadBoletim);
+    _optionalSync('notas', _loadNotes);
+    _optionalSync('recentes', _loadRecent);
+    _optionalSync('plano de leitura', _loadPlan);
+    await _optional('normalização de chaves', _migrateKeysToCanonical);
+    await _optional('normalização de chaves de músicas', _migrateSongKeys);
 
-    final libraryJson =
-        jsonDecode(await rootBundle.loadString('assets/biblioteca.json'))
-            as Map<String, dynamic>;
-    biblioteca = ((libraryJson['texts'] as List<dynamic>?) ?? [])
-        .map((e) => BibliotecaText.fromJson(e as Map<String, dynamic>))
-        .toList();
+    await _optional('biblioteca', () async {
+      final libraryJson =
+          jsonDecode(await rootBundle.loadString('assets/biblioteca.json'))
+              as Map<String, dynamic>;
+      biblioteca = ((libraryJson['texts'] as List<dynamic>?) ?? [])
+          .map((e) => BibliotecaText.fromJson(e as Map<String, dynamic>))
+          .toList();
+    });
 
     loaded = true;
     notifyListeners();
@@ -152,12 +158,36 @@ class AppState extends ChangeNotifier {
     _widgetChannel.setMethodCallHandler(_handleWidgetCall);
   }
 
+  /// Executa uma etapa opcional do [load] sem impedir a partida do app.
+  ///
+  /// Sem isto, um único asset corrompido ou uma preferência malformada deixa a
+  /// tela inicial preta para sempre, porque `runApp` só é chamado depois que o
+  /// [load] termina.
+  Future<void> _optional(String label, Future<void> Function() step) async {
+    try {
+      await step();
+    } catch (error, stack) {
+      debugPrint('Falha ao carregar "$label": $error\n$stack');
+    }
+  }
+
+  /// Igual a [_optional], para etapas síncronas.
+  void _optionalSync(String label, void Function() step) {
+    try {
+      step();
+    } catch (error, stack) {
+      debugPrint('Falha ao carregar "$label": $error\n$stack');
+    }
+  }
+
   Future<dynamic> _handleWidgetCall(MethodCall call) async {
     if (call.method == 'getDailyVerse') {
       final today = DateTime.now();
-      final (book, chapter, verse) = dailyVerseFor(today);
-      final verseText = bible[book].chapters[chapter][verse];
-      final ref = formatRef(bible, book, chapter, verse);
+      final verse = dailyVerseForIn(bible, today);
+      if (verse == null) return null;
+      final (book, chapter, v) = verse;
+      final verseText = bible[book].chapters[chapter][v];
+      final ref = formatRef(bible, book, chapter, v);
       return {'text': verseText, 'ref': ref, 'date': today.toIso8601String().split('T')[0]};
     }
     return null;
@@ -285,6 +315,66 @@ class AppState extends ChangeNotifier {
     }
 
     await prefs.setBool('migrated_keys_v2', true);
+  }
+
+  /// Identificador estável de uma música, usado nas chaves de nota/destaque.
+  ///
+  /// Antes a chave usava o índice na lista, que muda quando qualquer música é
+  /// excluída ou reordenada — e as notas passavam a apontar para a música
+  /// errada. O id vem do conteúdo (título + letra), que não muda.
+  static String songId(Song s) => _stableHash('${s.title}\u0000${s.lyrics}');
+
+  /// FNV-1a de 31 bits. O `hashCode` do Dart não é garantido entre execuções,
+  /// então não serve para uma chave persistida.
+  static String _stableHash(String input) {
+    var hash = 0x811c9dc5;
+    for (final unit in input.codeUnits) {
+      hash = (((hash ^ unit) * 0x01000193) & 0xffffffff) & 0x7fffffff;
+    }
+    return hash.toRadixString(16);
+  }
+
+  /// Converte, uma única vez, as chaves antigas `s:<índice>:<linha>` das notas
+  /// e destaques de músicas para `s:<id>:<linha>`.
+  Future<void> _migrateSongKeys() async {
+    if (prefs.getBool('migrated_song_keys_v1') == true) return;
+    try {
+      final pattern = RegExp(r'^s:(\d+):(\d+)$');
+
+      final newNotes = <String, String>{};
+      var changed = false;
+      for (final entry in notes.entries) {
+        final m = pattern.firstMatch(entry.key);
+        final idx = m == null ? -1 : int.parse(m.group(1)!);
+        if (idx < 0 || idx >= songs.length) {
+          // Já canônica, ou um índice que não existe mais: mantém como está.
+          newNotes[entry.key] = entry.value;
+          continue;
+        }
+        newNotes['s:${songId(songs[idx])}:${m!.group(2)}'] = entry.value;
+        changed = true;
+      }
+      if (changed) {
+        notes = newNotes;
+        await prefs.setString('notes', jsonEncode(notes));
+      }
+
+      for (final key in prefs.getKeys()) {
+        if (!key.startsWith('hl_s:')) continue;
+        final m = pattern.firstMatch(key.substring(3));
+        if (m == null) continue;
+        final idx = int.parse(m.group(1)!);
+        if (idx < 0 || idx >= songs.length) continue;
+        final value = prefs.getInt(key);
+        if (value == null) continue;
+        await prefs.setInt('hl_s:${songId(songs[idx])}:${m.group(2)}', value);
+        await prefs.remove(key);
+      }
+
+      await prefs.setBool('migrated_song_keys_v1', true);
+    } catch (error, stack) {
+      debugPrint('Falha ao migrar chaves de músicas: $error\n$stack');
+    }
   }
 
   // ------------------------------------------------------------- traduções
@@ -479,14 +569,30 @@ class AppState extends ChangeNotifier {
   }
 
   /// Salva o versículo do dia no SharedPreferences para o widget ler.
+  ///
+  /// Nunca lança: uma referência ausente na tradução ativa apenas mantém o
+  /// valor anterior salvo, para não derrubar a inicialização do app.
   Future<void> _saveDailyVerse() async {
     final today = DateTime.now();
-    final (book, chapter, verse) = dailyVerseFor(today);
-    final verseText = bible[book].chapters[chapter][verse];
-    final ref = formatRef(bible, book, chapter, verse);
+    final verse = dailyVerseForIn(bible, today);
+    if (verse == null) return;
+    final (book, chapter, v) = verse;
+    final verseText = bible[book].chapters[chapter][v];
+    final ref = formatRef(bible, book, chapter, v);
     await prefs.setString('daily_verse_text', verseText);
     await prefs.setString('daily_verse_ref', ref);
     await prefs.setString('daily_verse_date', today.toIso8601String().split('T')[0]);
+    await _notifyNativeWidget();
+  }
+
+  /// Pede ao Android que redesenhe o widget com o versículo recém-salvo.
+  Future<void> _notifyNativeWidget() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await _widgetChannel.invokeMethod<void>('refreshWidget');
+    } catch (_) {
+      // Plataforma sem suporte a widget: segue sem aviso.
+    }
   }
 
   // ------------------------------------------------------------- posição
@@ -740,6 +846,10 @@ class AppState extends ChangeNotifier {
       'version': version,
       'theme': themeIndex,
       'font_scale': fontScale,
+      'red_letter_enabled': redLetterEnabled,
+      'tts_rate': ttsRate,
+      'tts_pitch': ttsPitch,
+      'tts_voice': ttsVoice,
       'highlights': _allHighlights(),
       'notes': notes,
       'songs': parseSongsJson(songs),
@@ -866,6 +976,23 @@ class AppState extends ChangeNotifier {
     if (theme is int && theme >= 0 && theme < kThemeNames.length) {
       setTheme(theme);
     }
+
+    // `font_scale` era exportado mas nunca restaurado: um backup reimportado
+    // perdia o tamanho de fonte escolhido pelo usuário.
+    final font = data['font_scale'];
+    if (font is num) {
+      setFontScale(snapFontLevel(font.toDouble()));
+    }
+
+    final redLetter = data['red_letter_enabled'];
+    if (redLetter is bool) setRedLetterEnabled(redLetter);
+
+    final rate = data['tts_rate'];
+    if (rate is num) setTtsRate(rate.toDouble());
+    final pitch = data['tts_pitch'];
+    if (pitch is num) setTtsPitch(pitch.toDouble());
+    final voice = data['tts_voice'];
+    if (voice is String) setTtsVoice(voice);
 
     notifyListeners();
   }

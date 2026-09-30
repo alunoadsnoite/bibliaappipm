@@ -330,86 +330,106 @@ class _BoletimTabState extends State<BoletimTab> {
       time.text = e.time;
       note.text = e.note;
     }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.card,
-        title: Text(index == null ? 'Novo evento' : 'Editar evento',
-            style: TextStyle(color: t.text)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: title,
-                style: TextStyle(color: t.text),
-                decoration: const InputDecoration(hintText: 'Título do evento'),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: _numField(day, 'Dia')),
-                  const SizedBox(width: 8),
-                  Expanded(child: _numField(month, 'Mês')),
-                  const SizedBox(width: 8),
-                  Expanded(child: _numField(year, 'Ano')),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: time,
-                style: TextStyle(color: t.text),
-                decoration:
-                    const InputDecoration(hintText: 'Hora (opcional)'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: note,
-                style: TextStyle(color: t.text),
-                decoration:
-                    const InputDecoration(hintText: 'Observação (opcional)'),
-              ),
-            ],
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: t.card,
+          title: Text(index == null ? 'Novo evento' : 'Editar evento',
+              style: TextStyle(color: t.text)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: title,
+                  style: TextStyle(color: t.text),
+                  decoration:
+                      const InputDecoration(hintText: 'Título do evento'),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _numField(day, 'Dia')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _numField(month, 'Mês')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _numField(year, 'Ano')),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: time,
+                  style: TextStyle(color: t.text),
+                  decoration:
+                      const InputDecoration(hintText: 'Hora (opcional)'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: note,
+                  style: TextStyle(color: t.text),
+                  decoration:
+                      const InputDecoration(hintText: 'Observação (opcional)'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Salvar')),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Salvar')),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final ttl = title.text.trim();
-    final d = int.tryParse(day.text.trim()) ?? -1;
-    final m = int.tryParse(month.text.trim()) ?? -1;
-    final y = int.tryParse(year.text.trim()) ?? -1;
-    if (ttl.isEmpty ||
-        d < 1 ||
-        d > 31 ||
-        m < 1 ||
-        m > 12 ||
-        y < 2000 ||
-        y > 2100) {
-      return;
+      );
+      if (ok != true) return;
+      final ttl = title.text.trim();
+      final d = int.tryParse(day.text.trim()) ?? -1;
+      final m = int.tryParse(month.text.trim()) ?? -1;
+      final y = int.tryParse(year.text.trim()) ?? -1;
+      // `DateTime` normaliza datas impossíveis (31/02 vira 03/03), então um dia
+      // dentro de 1..31 não basta: precisa existir no mês escolhido.
+      final lastDay = (m >= 1 && m <= 12) ? DateTime(y, m + 1, 0).day : 0;
+      final String? error = ttl.isEmpty
+          ? 'Informe o título do evento.'
+          : m < 1 || m > 12
+              ? 'Mês inválido.'
+              : y < 2000 || y > 2100
+                  ? 'Ano inválido.'
+                  : (d < 1 || d > lastDay)
+                      ? 'Não existe dia $d em $m/$y.'
+                      : null;
+      if (error != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(error)));
+        return;
+      }
+      if (index == null) {
+        AppState.i.events.add(ChurchEvent(
+            ttl, d, m, y, time.text.trim(), note.text.trim()));
+      } else {
+        AppState.i.events[index]
+          ..title = ttl
+          ..day = d
+          ..month = m
+          ..year = y
+          ..time = time.text.trim()
+          ..note = note.text.trim();
+      }
+      await AppState.i.saveBoletim();
+      if (mounted) setState(() {});
+    } finally {
+      title.dispose();
+      day.dispose();
+      month.dispose();
+      year.dispose();
+      time.dispose();
+      note.dispose();
     }
-    if (index == null) {
-      AppState.i.events.add(ChurchEvent(
-          ttl, d, m, y, time.text.trim(), note.text.trim()));
-    } else {
-      AppState.i.events[index]
-        ..title = ttl
-        ..day = d
-        ..month = m
-        ..year = y
-        ..time = time.text.trim()
-        ..note = note.text.trim();
-    }
-    await AppState.i.saveBoletim();
-    if (mounted) setState(() {});
   }
 
   Widget _numField(TextEditingController c, String hint) {

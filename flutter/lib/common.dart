@@ -24,8 +24,14 @@ const List<String> kHighlightNames = [
   'Rosa',
 ];
 
+/// Tema efetivo da interface. Precisa respeitar o override do modo de leitura
+/// ([AppState.displayedThemeIndex]), igual ao `MaterialApp`, para os widgets
+/// não ficarem com as cores do tema escolhido em vez do exibido.
 AppTheme get appTheme =>
-    themeForIndex(AppState.i.themeIndex, AppState.i.systemBrightness);
+    themeForIndex(
+      AppState.i.displayedThemeIndex,
+      AppState.i.systemBrightness,
+    );
 
 /// Remove diacríticos (acentos e cedilha) de uma string.
 String stripDiacritics(String s) {
