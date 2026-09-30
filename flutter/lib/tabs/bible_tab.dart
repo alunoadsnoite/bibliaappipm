@@ -810,14 +810,11 @@ class _BibleTabState extends State<BibleTab> {
   Widget _dailyVerseCard() {
     final t = appTheme;
     final day = DateTime.now();
-    final (bIdx, cIdx, vIdx) = dailyVerseFor(day);
     final bible = AppState.i.bible;
-    if (bIdx >= bible.length ||
-        cIdx >= bible[bIdx].chapters.length ||
-        vIdx >= bible[bIdx].chapters[cIdx].length) {
-      return const SizedBox.shrink();
-    }
-    final ref = formatRef(bible, bIdx, cIdx, vIdx);
+    final ref = dailyVerseForIn(bible, day);
+    if (ref == null) return const SizedBox.shrink();
+    final (bIdx, cIdx, vIdx) = ref;
+    final label = formatRef(bible, bIdx, cIdx, vIdx);
     final text = bible[bIdx].chapters[cIdx][vIdx];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -857,7 +854,7 @@ class _BibleTabState extends State<BibleTab> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  ref,
+                  label,
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
