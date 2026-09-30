@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:biblia_app/daily.dart';
+import 'package:biblia_app/models.dart';
 import 'package:biblia_app/store.dart';
 import 'package:biblia_app/tabs/bible_tab.dart';
 import 'package:biblia_app/theme.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,6 +59,18 @@ void main() {
           isFalse);
     });
 
+    test('a primeira entrada da lista é alcançável', () {
+      // 1 de janeiro é o dia 1 e precisa cair no índice 0: com
+      // `dayOfYear % length` a primeira entrada ficaria inalcançável.
+      expect(dayOfYear(DateTime(2026, 1, 1)), 1);
+      expect(dailyVerseFor(DateTime(2026, 1, 1)), kDailyVerses.first);
+      expect(dailyVerseFor(DateTime(2027, 1, 1)), kDailyVerses.first);
+    });
+
+    test('sem referências repetidas', () {
+      expect(kDailyVerses.toSet().length, kDailyVerses.length);
+    });
+
     test('todas as referências existem na tradução ativa', () {
       final bible = AppState.i.bible;
       for (final (b, c, v) in kDailyVerses) {
@@ -66,6 +80,39 @@ void main() {
             reason: 'capítulo inválido em $b:$c:$v');
         expect(v, inInclusiveRange(0, bible[b].chapters[c].length - 1),
             reason: 'versículo inválido em $b:$c:$v');
+      }
+    });
+
+    test('todas as referências existem em todas as traduções', () async {
+      // As traduções discordam na contagem de versículos (1 Reis 22 tem 53 na
+      // ARA e 54 na NVI, por exemplo), então uma referência válida só na ARA
+      // ainda quebraria o app ao trocar de tradução.
+      for (final entry in kVersionAssets.entries) {
+        final raw =
+            jsonDecode(await rootBundle.loadString(entry.value))
+                as List<dynamic>;
+        final books = raw
+            .map((e) => Book.fromJson(e as Map<String, dynamic>))
+            .toList();
+        expect(books.length, 66, reason: '${entry.key} com livros incompletos');
+        for (final (b, c, v) in kDailyVerses) {
+          expect(b, inInclusiveRange(0, books.length - 1),
+              reason: '${entry.key}: livro $b inválido em $b:$c:$v');
+          expect(c, inInclusiveRange(0, books[b].chapters.length - 1),
+              reason: '${entry.key}: capítulo $c inválido em $b:$c:$v');
+          expect(v, inInclusiveRange(0, books[b].chapters[c].length - 1),
+              reason: '${entry.key}: versículo $v inválido em $b:$c:$v');
+        }
+      }
+    });
+
+    test('a rotação do ano inteiro é resolvível na tradução ativa', () {
+      final bible = AppState.i.bible;
+      var day = DateTime(2026, 1, 1);
+      for (var i = 0; i < 365; i++) {
+        expect(dailyVerseForIn(bible, day), isNotNull,
+            reason: 'sem versículo para $day');
+        day = day.add(const Duration(days: 1));
       }
     });
   });
@@ -196,6 +243,58 @@ void main() {
       expect(AppState.i.getNote('v:42:3:16'), 'Anotado.');
       expect(AppState.i.totalRead, 1);
       expect(AppState.i.lastPosition!.chapter, 1);
+    });
+
+    test('restaura tamanho de letra e preferências de leitura', () async {
+      final level = kFontLevels[2];
+      AppState.i.setFontScale(level);
+      AppState.i.setRedLetterEnabled(true);
+      AppState.i.setTtsRate(0.7);
+      AppState.i.setTtsPitch(1.5);
+      AppState.i.setTtsVoice('female');
+
+      final json = AppState.i.buildExportJson();
+
+      SharedPreferences.setMockInitialValues({});
+      await AppState.i.load();
+      expect(AppState.i.fontScale, isNot(level));
+
+      await AppState.i.importFromJson(json);
+
+      expect(AppState.i.fontScale, level);
+      expect(AppState.i.redLetterEnabled, isTrue);
+      expect(AppState.i.ttsRate, closeTo(0.7, 0.001));
+      expect(AppState.i.ttsPitch, closeTo(1.5, 0.001));
+      expect(AppState.i.ttsVoice, 'female');
+    });
+  });
+
+  group('músicas', () {
+    test('o id não depende da posição na lista', () {
+      final a = Song('Opressor', 'Versículo um\nVersículo dois');
+      final b = Song('Outra', 'Só um versículo');
+      expect(AppState.songId(a), AppState.songId(Song('Opressor',
+          'Versículo um\nVersículo dois')));
+      expect(AppState.songId(a), isNot(AppState.songId(b)));
+    });
+
+    test('nota de uma música sobrevive à exclusão de outra', () async {
+      AppState.i.songs
+        ..clear()
+        ..add(Song('A', 'la'))
+        ..add(Song('B', 'lb'));
+      await AppState.i.saveSongs();
+
+      final key = 's:${AppState.songId(AppState.i.songs[1])}:0';
+      await AppState.i.setNote(key, 'nota da B');
+
+      // Exclui a primeira música: a B passa a ocupar o índice 0.
+      AppState.i.songs.removeAt(0);
+      await AppState.i.saveSongs();
+      await AppState.i.load();
+
+      expect(AppState.i.songs.single.title, 'B');
+      expect(AppState.i.getNote(key), 'nota da B');
     });
   });
 
