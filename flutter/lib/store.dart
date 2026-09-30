@@ -568,28 +568,25 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Salva o versículo do dia no SharedPreferences para o widget ler.
+  /// Envia o versículo do dia para o widget Android e pede o redesenhe.
   ///
-  /// Nunca lança: uma referência ausente na tradução ativa apenas mantém o
-  /// valor anterior salvo, para não derrubar a inicialização do app.
+  /// O texto e a referência são resolvidos aqui, na tradução ativa, para que o
+  /// widget mostre exatamente o mesmo conteúdo da tela inicial.
+  ///
+  /// Não lança: uma referência ausente na tradução ativa apenas mantém o
+  /// valor anterior no widget, para não derrubar a inicialização do app.
   Future<void> _saveDailyVerse() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     final today = DateTime.now();
     final verse = dailyVerseForIn(bible, today);
     if (verse == null) return;
     final (book, chapter, v) = verse;
-    final verseText = bible[book].chapters[chapter][v];
-    final ref = formatRef(bible, book, chapter, v);
-    await prefs.setString('daily_verse_text', verseText);
-    await prefs.setString('daily_verse_ref', ref);
-    await prefs.setString('daily_verse_date', today.toIso8601String().split('T')[0]);
-    await _notifyNativeWidget();
-  }
-
-  /// Pede ao Android que redesenhe o widget com o versículo recém-salvo.
-  Future<void> _notifyNativeWidget() async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
-      await _widgetChannel.invokeMethod<void>('refreshWidget');
+      await _widgetChannel.invokeMethod<void>('syncWidget', {
+        'text': bible[book].chapters[chapter][v],
+        'ref': formatRef(bible, book, chapter, v),
+        'date': today.toIso8601String().split('T')[0],
+      });
     } catch (_) {
       // Plataforma sem suporte a widget: segue sem aviso.
     }

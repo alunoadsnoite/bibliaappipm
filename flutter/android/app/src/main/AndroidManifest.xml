@@ -34,6 +34,12 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="br.com.valdenor.bibliaapp/widget" />
+                <!-- Trocar de fuso ou atualizar o app invalida o versículo salvo: repinta
+                     para o placeholder não ficar horas na tela. ACTION_DATE_CHANGED
+                     fica de fora de propósito: a partir do Android 8 ele não é
+                     entregue a receivers declarados no manifesto. -->
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

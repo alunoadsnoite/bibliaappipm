@@ -23,8 +23,26 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, widgetChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    // O Flutter acabou de salvar o versículo do dia; redesenha o
-                    // widget para não esperar o updatePeriodMillis.
+                    // O Flutter envia o versículo do dia já resolvido na tradução
+                    // ativa; grava e redesenha para não esperar o updatePeriodMillis.
+                    "syncWidget" -> {
+                        val text = call.argument<String>("text")
+                        val ref = call.argument<String>("ref")
+                        val date = call.argument<String>("date")
+                        if (text.isNullOrEmpty() || ref.isNullOrEmpty() ||
+                            date.isNullOrEmpty()
+                        ) {
+                            result.error(
+                                "invalid_arguments",
+                                "syncWidget exige text, ref e date não vazios",
+                                null
+                            )
+                        } else {
+                            DailyVerseWidgetProvider.sync(this, text, ref, date)
+                            result.success(null)
+                        }
+                    }
+                    // Repinta com o que já está salvo, sem alterar o conteúdo.
                     "refreshWidget" -> {
                         DailyVerseWidgetProvider.refreshAll(this)
                         result.success(null)
@@ -32,6 +50,13 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Se o app foi aberto para ter o widget atualizado e o `syncWidget` não
+        // chegou (engine reaproveitada, falha de leitura), repinta mesmo assim.
+        DailyVerseWidgetProvider.refreshAll(this)
     }
 
     /**

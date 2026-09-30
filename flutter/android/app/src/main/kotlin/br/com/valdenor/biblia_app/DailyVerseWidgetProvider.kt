@@ -15,11 +15,14 @@ import java.util.Locale
 /**
  * Widget "Versículo do Dia".
  *
- * O texto e a referência são gravados pelo app Flutter em SharedPreferences
- * ([AppState._saveDailyVerse]); o widget apenas os exibe. Não há cópia local da
- * lista de versículos nem leitura do JSON da Bíblia aqui: uma lista embutida
- * desincronizaria do app, e parsear o asset (centenas de KB) na thread principal
- * a cada atualização causaria ANR.
+ * O texto e a referência são enviados pelo app Flutter pelo canal
+ * `br.com.valdenor.bibliaapp/widget` (ver [MainActivity]) e ficam gravados
+ * [PREFS_NAME], um arquivo de preferências que pertence a este widget.
+ *
+ * Não é possível ler as preferências do `shared_preferences` diretamente
+ * daqui: o plugin grava no arquivo "FlutterSharedPreferences" com as chaves
+ * prefixadas por "flutter.", ou em DataStore, e nenhum dos dois é contrato
+ * estável para um `AppWidgetProvider`.
  */
 class DailyVerseWidgetProvider : AppWidgetProvider() {
 
@@ -35,38 +38,57 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        when (intent.action) {
-            ACTION_REFRESH, Intent.ACTION_DATE_CHANGED,
-            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> refreshAll(context)
-        }
+        // Trocar de dia ou fuso invalida o texto salvo, então é preciso
+        // redesenhar para o placeholder não ficar horas na tela.
+        if (intent.action in RERENDER_ACTIONS) refreshAll(context)
     }
 
     companion object {
-        // O shared_preferences 2.x grava em "<applicationId>_preferences", e o
-        // applicationId vive em android/app/build.gradle.kts. Precisa bater com
-        // ele para o widget enxergar o que o app Flutter salvou.
-        const val PREFS_NAME = "br.com.valdenor.bibliaapp_preferences"
-        const val ACTION_REFRESH = "br.com.valdenor.bibliaapp/widget"
+        const val PREFS_NAME = "widget_daily_verse"
 
-        private const val VERSE_TEXT_KEY = "daily_verse_text"
-        private const val VERSE_REF_KEY = "daily_verse_ref"
-        private const val VERSE_DATE_KEY = "daily_verse_date"
+        private const val VERSE_TEXT_KEY = "text"
+        private const val VERSE_REF_KEY = "ref"
+        private const val VERSE_DATE_KEY = "date"
 
         private const val PLACEHOLDER_TEXT =
             "Abra o app para ver o versículo de hoje."
         private const val PLACEHOLDER_REF = "Bíblia IPM"
 
+        private val RERENDER_ACTIONS = setOf(
+            Intent.ACTION_DATE_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+        )
+
         /** Data local no mesmo formato `YYYY-MM-DD` usado pelo lado Dart. */
         private fun today(): String =
             SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
+        private fun prefs(context: Context): SharedPreferences =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        /**
+         * Grava o versículo recebido do app e redesenha o widget.
+         *
+         * Usa `commit()` (síncrono) de propósito: o redesenho acontece logo em
+         * seguida e precisa enxergar o valor gravado.
+         */
+        fun sync(context: Context, text: String, ref: String, date: String) {
+            prefs(context).edit()
+                .putString(VERSE_TEXT_KEY, text)
+                .putString(VERSE_REF_KEY, ref)
+                .putString(VERSE_DATE_KEY, date)
+                .commit()
+            refreshAll(context)
+        }
+
         /**
          * Versículo salvo para hoje, ou um texto neutro quando o app ainda não
-         * rodou no dia corrente. `SimpleDateFormat` em vez de `java.time` porque
-         * `java.time` exige API 26 e o `minSdk` do projeto é menor.
+         * rodou no dia corrente. `SimpleDateFormat` em vez de `java.time`
+         * porque `java.time` exige API 26 e o `minSdk` do projeto é menor.
          */
         private fun verseOf(context: Context): Pair<String, String> {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val prefs = prefs(context)
             if (prefs.getString(VERSE_DATE_KEY, "") == today()) {
                 val text = prefs.getString(VERSE_TEXT_KEY, "").orEmpty()
                 val ref = prefs.getString(VERSE_REF_KEY, "").orEmpty()

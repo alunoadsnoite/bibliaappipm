@@ -6,6 +6,7 @@ import 'package:biblia_app/models.dart';
 import 'package:biblia_app/store.dart';
 import 'package:biblia_app/tabs/bible_tab.dart';
 import 'package:biblia_app/theme.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -114,6 +115,92 @@ void main() {
             reason: 'sem versículo para $day');
         day = day.add(const Duration(days: 1));
       }
+    });
+  });
+
+  group('widget do versículo do dia', () {
+    // O widget não lê as preferências do shared_preferences: o plugin grava no
+    // arquivo "FlutterSharedPreferences" com prefixo "flutter." (ou em
+    // DataStore). O texto precisa chegar pelo canal nativo, senão o widget
+    // fica preso no placeholder.
+    setUp(() {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    });
+
+    tearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    test('envia texto, referência e data de hoje ao widget no load',
+        () async {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel('br.com.valdenor.bibliaapp/widget'),
+              (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() => TestDefaultBinaryMessengerBinding
+          .instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+              const MethodChannel('br.com.valdenor.bibliaapp/widget'), null));
+
+      await AppState.i.load();
+
+      final sync = calls.where((c) => c.method == 'syncWidget').toList();
+      expect(sync, isNotEmpty,
+          reason: 'o app precisa pedir o sync do widget ao abrir');
+
+      final args = (sync.first.arguments as Map).cast<String, dynamic>();
+      expect((args['text'] as String).trim(), isNotEmpty);
+      expect((args['ref'] as String).trim(), isNotEmpty);
+      expect(args['date'], DateTime.now().toIso8601String().split('T')[0]);
+    });
+
+    test('o texto enviado é o mesmo da tela inicial', () async {
+      final args = <String, dynamic>{};
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel('br.com.valdenor.bibliaapp/widget'),
+              (call) async {
+        if (call.method == 'syncWidget') {
+          args
+            ..clear()
+            ..addAll((call.arguments as Map).cast<String, dynamic>());
+        }
+        return null;
+      });
+      addTearDown(() => TestDefaultBinaryMessengerBinding
+          .instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+              const MethodChannel('br.com.valdenor.bibliaapp/widget'), null));
+
+      await AppState.i.load();
+
+      final bible = AppState.i.bible;
+      final (b, c, v) = dailyVerseFor(DateTime.now());
+      expect(args['text'], bible[b].chapters[c][v]);
+      expect(args['ref'], formatRef(bible, b, c, v));
+    });
+
+    test('trocar de tradução reenvia o versículo na nova versão', () async {
+      final texts = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel('br.com.valdenor.bibliaapp/widget'),
+              (call) async {
+        if (call.method == 'syncWidget') {
+          texts.add(((call.arguments as Map)['text']) as String);
+        }
+        return null;
+      });
+      addTearDown(() => TestDefaultBinaryMessengerBinding
+          .instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+              const MethodChannel('br.com.valdenor.bibliaapp/widget'), null));
+
+      await AppState.i.setVersion('nvi');
+      final nvi = AppState.i.bible;
+      final (b, c, v) = dailyVerseFor(DateTime.now());
+      expect(texts.last, nvi[b].chapters[c][v]);
     });
   });
 
