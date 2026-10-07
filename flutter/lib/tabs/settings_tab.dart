@@ -720,61 +720,66 @@ class SettingsTab extends StatelessWidget {
     final t = appTheme;
     final ctrl = TextEditingController();
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.card,
-        title: Text('Importar dados', style: TextStyle(color: t.text)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Cole abaixo o backup (JSON) copiado pela opção "Exportar dados".',
-              style: TextStyle(color: t.muted, fontSize: 13),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: ctrl,
-              maxLines: 8,
-              style: TextStyle(color: t.text),
-              decoration: const InputDecoration(hintText: '{ "export": 1, ... }'),
-            ),
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: t.card,
+          title: Text('Importar dados', style: TextStyle(color: t.text)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Cole abaixo o backup (JSON) copiado pela opção "Exportar dados".',
+                style: TextStyle(color: t.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: ctrl,
+                maxLines: 8,
+                style: TextStyle(color: t.text),
+                decoration: const InputDecoration(
+                    hintText: '{ "export": 1, ... }'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Restaurar')),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Restaurar')),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final text = ctrl.text.trim();
-    if (text.isEmpty) return;
-    try {
-      final decoded = jsonDecode(text);
-      if (decoded is! Map || decoded['export'] != 1) {
+      );
+      if (ok != true) return;
+      final text = ctrl.text.trim();
+      if (text.isEmpty) return;
+      try {
+        final decoded = jsonDecode(text);
+        if (decoded is! Map || decoded['export'] != 1) {
+          messenger.showSnackBar(SnackBar(
+            content: Text('Backup inválido.', style: TextStyle(color: t.text)),
+            backgroundColor: t.card,
+          ));
+          return;
+        }
+        await AppState.i.importFromJson(text);
         messenger.showSnackBar(SnackBar(
-          content: Text('Backup inválido.', style: TextStyle(color: t.text)),
+          content: Text('Dados restaurados com sucesso.',
+              style: TextStyle(color: t.text)),
           backgroundColor: t.card,
         ));
-        return;
+      } catch (_) {
+        messenger.showSnackBar(SnackBar(
+          content: Text('Não foi possível ler o backup.',
+              style: TextStyle(color: t.text)),
+          backgroundColor: t.card,
+        ));
       }
-      await AppState.i.importFromJson(text);
-      messenger.showSnackBar(SnackBar(
-        content:
-            Text('Dados restaurados com sucesso.', style: TextStyle(color: t.text)),
-        backgroundColor: t.card,
-      ));
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Não foi possível ler o backup.',
-            style: TextStyle(color: t.text)),
-        backgroundColor: t.card,
-      ));
+    } finally {
+      ctrl.dispose();
     }
   }
 }

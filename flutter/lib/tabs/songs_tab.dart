@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../common.dart';
@@ -17,9 +19,11 @@ class _SongsTabState extends State<SongsTab> {
   final TextEditingController _search = TextEditingController();
   String _query = '';
   Song? _current;
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -78,7 +82,13 @@ class _SongsTabState extends State<SongsTab> {
                       width: 140,
                       child: TextField(
                         controller: _search,
-                        onChanged: (v) => setState(() => _query = v),
+                        onChanged: (v) {
+                          // Debounce: filtra (título+letra, em toda a lista)
+                          // só depois da pausa na digitação.
+                          _debounce?.cancel();
+                          _debounce = Timer(const Duration(milliseconds: 250),
+                              () => setState(() => _query = v));
+                        },
                         style: TextStyle(color: t.text, fontSize: 14),
                         decoration: InputDecoration(
                           hintText: 'Buscar música',
@@ -236,8 +246,12 @@ class _SongsTabState extends State<SongsTab> {
         text: text,
         highlightKey: key,
         note: AppState.i.getNote(key) ?? '',
-        onHighlightChanged: (_) => setState(() {}),
-        onNoteChanged: (_) => setState(() {}),
+        onHighlightChanged: (_) {
+          if (mounted) setState(() {});
+        },
+        onNoteChanged: (_) {
+          if (mounted) setState(() {});
+        },
       ),
       child: Container(
         width: double.infinity,
@@ -256,60 +270,69 @@ class _SongsTabState extends State<SongsTab> {
     final t = appTheme;
     final titleCtrl = TextEditingController();
     final lyricsCtrl = TextEditingController();
-    if (song != null) {
-      titleCtrl.text = song.title;
-      lyricsCtrl.text = song.lyrics;
-    }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.card,
-        title: Text(song == null ? 'Nova música' : 'Editar música',
-            style: TextStyle(color: t.text)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                style: TextStyle(color: t.text),
-                decoration: const InputDecoration(hintText: 'Título da música'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: lyricsCtrl,
-                maxLines: 10,
-                style: TextStyle(color: t.text),
-                decoration:
-                    const InputDecoration(hintText: 'Letra (uma frase por linha)'),
-              ),
-            ],
+    try {
+      if (song != null) {
+        titleCtrl.text = song.title;
+        lyricsCtrl.text = song.lyrics;
+      }
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: t.card,
+          title: Text(song == null ? 'Nova música' : 'Editar música',
+              style: TextStyle(color: t.text)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleCtrl,
+                  style: TextStyle(color: t.text),
+                  decoration:
+                      const InputDecoration(hintText: 'Título da música'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: lyricsCtrl,
+                  maxLines: 10,
+                  style: TextStyle(color: t.text),
+                  decoration: const InputDecoration(
+                      hintText: 'Letra (uma frase por linha)'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Salvar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final title = titleCtrl.text.trim();
-    final lyrics = lyricsCtrl.text.trim();
-    if (title.isEmpty || lyrics.isEmpty) return;
-    if (song == null) {
-      AppState.i.songs.add(Song(title, lyrics));
-    } else {
-      song.title = title;
-      song.lyrics = lyrics;
+      );
+      if (ok != true) return;
+      final title = titleCtrl.text.trim();
+      final lyrics = lyricsCtrl.text.trim();
+      if (title.isEmpty || lyrics.isEmpty) return;
+      if (song == null) {
+        AppState.i.songs.add(Song(title, lyrics));
+      } else {
+        song.title = title;
+        song.lyrics = lyrics;
+      }
+      await AppState.i.saveSongs();
+      // Só volta para a visão de detalhe quando a edição partiu dela. Editar
+      // (ou adicionar) pela lista não pode pular sem querer para o detalhe.
+      final wasOpen = identical(song, _current);
+      if (mounted) setState(() => _current = wasOpen ? song : null);
+    } finally {
+      titleCtrl.dispose();
+      lyricsCtrl.dispose();
     }
-    await AppState.i.saveSongs();
-    if (mounted) setState(() => _current = song);
   }
 
   Future<void> _itemMenu(Song s) async {

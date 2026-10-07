@@ -253,64 +253,99 @@ class _BoletimTabState extends State<BoletimTab> {
     final name = TextEditingController();
     final day = TextEditingController();
     final month = TextEditingController();
-    if (index != null) {
-      final b = AppState.i.birthdays[index];
-      name.text = b.name;
-      day.text = '${b.day}';
-      month.text = '${b.month}';
-    }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.card,
-        title: Text(
-            index == null ? 'Novo aniversariante' : 'Editar aniversariante',
-            style: TextStyle(color: t.text)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: name,
-                style: TextStyle(color: t.text),
-                decoration: const InputDecoration(hintText: 'Nome'),
+    try {
+      if (index != null) {
+        final b = AppState.i.birthdays[index];
+        name.text = b.name;
+        day.text = '${b.day}';
+        month.text = '${b.month}';
+      }
+      String? error;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final int? d = int.tryParse(day.text.trim());
+            final int? m = int.tryParse(month.text.trim());
+            return AlertDialog(
+              backgroundColor: t.card,
+              title: Text(
+                  index == null ? 'Novo aniversariante' : 'Editar aniversariante',
+                  style: TextStyle(color: t.text)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: name,
+                      style: TextStyle(color: t.text),
+                      decoration: const InputDecoration(hintText: 'Nome'),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(child: _numField(day, 'Dia')),
+                        const SizedBox(width: 8),
+                        Expanded(child: _numField(month, 'Mês')),
+                      ],
+                    ),
+                    // Valida ANTES de fechar: os campos digitados são ruído
+                    // até mês/dia existirem (Abril não tem o dia 31).
+                    if (error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(error!,
+                            style: TextStyle(color: t.redText, fontSize: 12)),
+                      ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: _numField(day, 'Dia')),
-                  const SizedBox(width: 8),
-                  Expanded(child: _numField(month, 'Mês')),
-                ],
-              ),
-            ],
-          ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancelar')),
+                TextButton(
+                  onPressed: () {
+                    final n = name.text.trim();
+                    final msg = n.isEmpty
+                        ? 'Informe o nome.'
+                        : m == null || m < 1 || m > 12
+                            ? 'Mês inválido.'
+                            : d == null || d < 1 || d > 31
+                                ? 'Dia inválido.'
+                                : null;
+                    if (msg != null) {
+                      setDialogState(() => error = msg);
+                      return;
+                    }
+                    Navigator.pop(ctx, true);
+                  },
+                  child: const Text('Salvar'),
+                ),
+              ],
+            );
+          },
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Salvar')),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final n = name.text.trim();
-    final d = int.tryParse(day.text.trim()) ?? -1;
-    final m = int.tryParse(month.text.trim()) ?? -1;
-    if (n.isEmpty || d < 1 || d > 31 || m < 1 || m > 12) return;
-    if (index == null) {
-      AppState.i.birthdays.add(Birthday(n, d, m));
-    } else {
-      AppState.i.birthdays[index]
-        ..name = n
-        ..day = d
-        ..month = m;
+      );
+      if (ok != true) return;
+      final n = name.text.trim();
+      final d = int.parse(day.text.trim());
+      final m = int.parse(month.text.trim());
+      if (index == null) {
+        AppState.i.birthdays.add(Birthday(n, d, m));
+      } else {
+        AppState.i.birthdays[index]
+          ..name = n
+          ..day = d
+          ..month = m;
+      }
+      await AppState.i.saveBoletim();
+      if (mounted) setState(() {});
+    } finally {
+      name.dispose();
+      day.dispose();
+      month.dispose();
     }
-    await AppState.i.saveBoletim();
-    if (mounted) setState(() {});
   }
 
   Future<void> _eventDialog(int? index) async {
@@ -321,93 +356,113 @@ class _BoletimTabState extends State<BoletimTab> {
     final year = TextEditingController(text: '${DateTime.now().year}');
     final time = TextEditingController();
     final note = TextEditingController();
-    if (index != null) {
-      final e = AppState.i.events[index];
-      title.text = e.title;
-      day.text = '${e.day}';
-      month.text = '${e.month}';
-      year.text = '${e.year}';
-      time.text = e.time;
-      note.text = e.note;
-    }
     try {
+      if (index != null) {
+        final e = AppState.i.events[index];
+        title.text = e.title;
+        day.text = '${e.day}';
+        month.text = '${e.month}';
+        year.text = '${e.year}';
+        time.text = e.time;
+        note.text = e.note;
+      }
+      String? error;
       final ok = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: t.card,
-          title: Text(index == null ? 'Novo evento' : 'Editar evento',
-              style: TextStyle(color: t.text)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: title,
-                  style: TextStyle(color: t.text),
-                  decoration:
-                      const InputDecoration(hintText: 'Título do evento'),
-                ),
-                const SizedBox(height: 10),
-                Row(
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final int? d = int.tryParse(day.text.trim());
+            final int? m = int.tryParse(month.text.trim());
+            final int? y = int.tryParse(year.text.trim());
+            // `DateTime` normaliza datas impossíveis (31/02 vira 03/03), então
+            // um dia dentro de 1..31 não basta: precisa existir no mês.
+            final int lastDay;
+            if (m == null || m < 1 || m > 12 || y == null || y < 1) {
+              lastDay = 0;
+            } else {
+              lastDay = DateTime(y, m + 1, 0).day;
+            }
+            return AlertDialog(
+              backgroundColor: t.card,
+              title: Text(index == null ? 'Novo evento' : 'Editar evento',
+                  style: TextStyle(color: t.text)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(child: _numField(day, 'Dia')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _numField(month, 'Mês')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _numField(year, 'Ano')),
+                    TextField(
+                      controller: title,
+                      style: TextStyle(color: t.text),
+                      decoration:
+                          const InputDecoration(hintText: 'Título do evento'),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(child: _numField(day, 'Dia')),
+                        const SizedBox(width: 8),
+                        Expanded(child: _numField(month, 'Mês')),
+                        const SizedBox(width: 8),
+                        Expanded(child: _numField(year, 'Ano')),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: time,
+                      style: TextStyle(color: t.text),
+                      decoration:
+                          const InputDecoration(hintText: 'Hora (opcional)'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: note,
+                      style: TextStyle(color: t.text),
+                      decoration: const InputDecoration(
+                          hintText: 'Observação (opcional)'),
+                    ),
+                    if (error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(error!,
+                            style: TextStyle(color: t.redText, fontSize: 12)),
+                      ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: time,
-                  style: TextStyle(color: t.text),
-                  decoration:
-                      const InputDecoration(hintText: 'Hora (opcional)'),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: note,
-                  style: TextStyle(color: t.text),
-                  decoration:
-                      const InputDecoration(hintText: 'Observação (opcional)'),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancelar')),
+                TextButton(
+                  onPressed: () {
+                    final ttl = title.text.trim();
+                    final msg = ttl.isEmpty
+                        ? 'Informe o título do evento.'
+                        : m == null || m < 1 || m > 12
+                            ? 'Mês inválido.'
+                            : y == null || y < 2000 || y > 2100
+                                ? 'Ano inválido.'
+                                : d == null || d < 1 || d > lastDay
+                                    ? 'Não existe dia $d em $m/$y.'
+                                    : null;
+                    if (msg != null) {
+                      setDialogState(() => error = msg);
+                      return;
+                    }
+                    Navigator.pop(ctx, true);
+                  },
+                  child: const Text('Salvar'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancelar')),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Salvar')),
-          ],
+            );
+          },
         ),
       );
       if (ok != true) return;
       final ttl = title.text.trim();
-      final d = int.tryParse(day.text.trim()) ?? -1;
-      final m = int.tryParse(month.text.trim()) ?? -1;
-      final y = int.tryParse(year.text.trim()) ?? -1;
-      // `DateTime` normaliza datas impossíveis (31/02 vira 03/03), então um dia
-      // dentro de 1..31 não basta: precisa existir no mês escolhido.
-      final lastDay = (m >= 1 && m <= 12) ? DateTime(y, m + 1, 0).day : 0;
-      final String? error = ttl.isEmpty
-          ? 'Informe o título do evento.'
-          : m < 1 || m > 12
-              ? 'Mês inválido.'
-              : y < 2000 || y > 2100
-                  ? 'Ano inválido.'
-                  : (d < 1 || d > lastDay)
-                      ? 'Não existe dia $d em $m/$y.'
-                      : null;
-      if (error != null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(error)));
-        return;
-      }
+      final d = int.parse(day.text.trim());
+      final m = int.parse(month.text.trim());
+      final y = int.parse(year.text.trim());
       if (index == null) {
         AppState.i.events.add(ChurchEvent(
             ttl, d, m, y, time.text.trim(), note.text.trim()));

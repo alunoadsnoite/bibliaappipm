@@ -5,7 +5,7 @@ import 'tts.dart';
 
 /// Barra de controle da leitura por voz, reutilizada na Bíblia,
 /// no Hinário e nas Músicas.
-class TtsBar extends StatelessWidget {
+class TtsBar extends StatefulWidget {
   const TtsBar({
     super.key,
     required this.positionLabel,
@@ -27,10 +27,20 @@ class TtsBar extends StatelessWidget {
   final int itemCount;
 
   @override
+  State<TtsBar> createState() => _TtsBarState();
+}
+
+class _TtsBarState extends State<TtsBar> {
+  // Merge cacheado para não (des)registrar listeners a cada build — mesmo
+  // padrão usado por BibleTab.
+  late final Listenable _ttsListenable =
+      Listenable.merge([TtsService.i.phase, TtsService.i.index]);
+
+  @override
   Widget build(BuildContext context) {
     final t = appTheme;
     return ListenableBuilder(
-      listenable: Listenable.merge([TtsService.i.phase, TtsService.i.index]),
+      listenable: _ttsListenable,
       builder: (context, _) {
         final phase = TtsService.i.phase.value;
         final idx = TtsService.i.index.value;
@@ -39,14 +49,14 @@ class TtsBar extends StatelessWidget {
         final active = playing || paused;
 
         String label;
-        if (playing && idx != null) {
-          label = '$positionLabel ${idx + 1} de $itemCount';
-        } else if (paused && idx != null) {
-          label = 'Pausado · $positionLabel ${idx + 1} de $itemCount';
-        } else if (playing) {
-          label = playLabel;
+        if (paused) {
+          label = idx == null
+              ? 'Pausado'
+              : 'Pausado · ${widget.positionLabel} ${idx + 1} de ${widget.itemCount}';
+        } else if (playing && idx != null) {
+          label = '${widget.positionLabel} ${idx + 1} de ${widget.itemCount}';
         } else {
-          label = playLabel;
+          label = widget.playLabel;
         }
 
         return Material(
@@ -73,7 +83,7 @@ class TtsBar extends StatelessWidget {
                 if (!active || paused)
                   IconButton(
                     icon: const Icon(Icons.play_arrow, color: Colors.white),
-                    onPressed: paused ? TtsService.i.resume : onPlay,
+                    onPressed: paused ? TtsService.i.resume : widget.onPlay,
                   ),
                 if (playing)
                   IconButton(

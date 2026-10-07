@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../common.dart';
@@ -17,9 +19,11 @@ class _HymnsTabState extends State<HymnsTab> {
   final TextEditingController _search = TextEditingController();
   String _query = '';
   Hymn? _current;
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -87,7 +91,13 @@ class _HymnsTabState extends State<HymnsTab> {
                       width: 140,
                       child: TextField(
                         controller: _search,
-                        onChanged: (v) => setState(() => _query = v),
+                        onChanged: (v) {
+                          // Debounce: o filtro percorre a letra de todos os
+                          // hinos, então só roda depois da pausa na digitação.
+                          _debounce?.cancel();
+                          _debounce = Timer(const Duration(milliseconds: 250),
+                              () => setState(() => _query = v));
+                        },
                         style: TextStyle(color: t.text, fontSize: 14),
                         decoration: InputDecoration(
                           hintText: 'Buscar hino',
@@ -218,8 +228,12 @@ class _HymnsTabState extends State<HymnsTab> {
         text: text,
         highlightKey: key,
         note: AppState.i.getNote(key) ?? '',
-        onHighlightChanged: (_) => setState(() {}),
-        onNoteChanged: (_) => setState(() {}),
+        onHighlightChanged: (_) {
+          if (mounted) setState(() {});
+        },
+        onNoteChanged: (_) {
+          if (mounted) setState(() {});
+        },
       ),
       child: Container(
         width: double.infinity,

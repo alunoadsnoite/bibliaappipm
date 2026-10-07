@@ -37,8 +37,8 @@ class _Group {
 const List<_Group> _kGroups = [
   _Group('Pentateuco', [0, 1, 2, 3, 4]),
   _Group('Livros Históricos', [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
-  _Group('Poéticos', [17, 18, 21]),
-  _Group('Sapenciais', [19, 20]),
+  _Group('Poéticos', [17, 18]),
+  _Group('Sapenciais', [19, 20, 21]),
   _Group('Proféticos Maiores', [22, 23, 24, 25, 26]),
   _Group('Proféticos Menores', [
     27,
@@ -149,7 +149,9 @@ ParsedRef? parseReference(List<Book> books, String text) {
 
 List<List<int>> _searchVerses(_SearchArg arg) {
   final res = <List<int>>[];
-  final lower = arg.query.toLowerCase();
+  // Busca sem sensibilidade a acentos ("sao" acha "São"), seguindo o mesmo
+  // folding usado nas referências.
+  final target = stripDiacritics(arg.query.toLowerCase());
   final only = arg.bookOnly;
   for (var bi = 0; bi < arg.books.length; bi++) {
     if (only != null && bi != only) continue;
@@ -157,7 +159,7 @@ List<List<int>> _searchVerses(_SearchArg arg) {
     for (var c = 0; c < b.chapters.length; c++) {
       final vs = b.chapters[c];
       for (var v = 0; v < vs.length; v++) {
-        if (vs[v].toLowerCase().contains(lower)) {
+        if (stripDiacritics(vs[v].toLowerCase()).contains(target)) {
           res.add([bi, c, v]);
           if (res.length >= _kMaxSearchResults) return res;
         }
@@ -168,7 +170,9 @@ List<List<int>> _searchVerses(_SearchArg arg) {
 }
 
 /// Monta um [TextSpan] destacando (com `highlight`) as ocorrências de
-/// `term` em `source`, ignorando maiúsculas/minúsculas.
+/// `term` em `source`, ignorando maiúsculas/minúsculas e acentos.
+/// Como `stripDiacritics` preserva o comprimento da string, os deslocamentos
+/// do texto dobrado casam com o texto original.
 TextSpan _highlightMatches(
   String source,
   String term,
@@ -176,12 +180,13 @@ TextSpan _highlightMatches(
   TextStyle highlight,
 ) {
   if (term.isEmpty) return TextSpan(text: source, style: base);
-  final lower = source.toLowerCase();
-  final q = term.toLowerCase();
+  final folded = stripDiacritics(source.toLowerCase());
+  final q = stripDiacritics(term.toLowerCase());
+  if (q.isEmpty) return TextSpan(text: source, style: base);
   final spans = <TextSpan>[];
   var start = 0;
   while (true) {
-    final i = lower.indexOf(q, start);
+    final i = folded.indexOf(q, start);
     if (i < 0) break;
     if (i > start) spans.add(TextSpan(text: source.substring(start, i)));
     spans.add(
@@ -278,10 +283,12 @@ class _BibleTabState extends State<BibleTab> {
       return;
     }
     if (_chapter != null || _results != null) TtsService.i.stop();
+    _invalidateSearch();
     setState(() {
       _search.clear();
       _focusMode = false;
       _immersive = false;
+      _searching = false;
       if (_results != null) {
         _results = null;
       } else if (_chapter != null) {
@@ -386,6 +393,7 @@ class _BibleTabState extends State<BibleTab> {
   }
 
   void _openVerse(int book, int chapter, int verse) {
+    _invalidateSearch();
     setState(() {
       _bookIndex = book;
       _chapter = chapter;
@@ -424,8 +432,12 @@ class _BibleTabState extends State<BibleTab> {
     _debounce = Timer(const Duration(milliseconds: 300), () {
       final query = q.trim();
       if (query.isEmpty) {
+        _invalidateSearch();
         if (_results != null) {
-          setState(() => _results = null);
+          setState(() {
+            _results = null;
+            _searching = false;
+          });
         }
         return;
       }
@@ -446,6 +458,7 @@ class _BibleTabState extends State<BibleTab> {
     if (parsed.verse != null) {
       _openVerse(parsed.book, parsed.chapter, parsed.verse!);
     } else {
+      _invalidateSearch();
       _bookIndex = parsed.book;
       _chapter = parsed.chapter;
       setState(() {
@@ -482,6 +495,15 @@ class _BibleTabState extends State<BibleTab> {
     });
   }
 
+  /// Invalida qualquer busca em andamento: cancela o debounce e bumpa o token
+  /// de job. Sem isso, uma busca anterior (ex.: da tradução antiga, ou que o
+  /// usuário já abandonou) terminava e sobrescrevia a tela atual — ou, pior,
+  /// indexava a nova tradução com índices antigos (RangeError).
+  void _invalidateSearch() {
+    _debounce?.cancel();
+    _job++;
+  }
+
   void _showMore() {
     setState(() {
       _visible = (_visible + _kResultsPerPage).clamp(0, _results!.length);
@@ -491,6 +513,7 @@ class _BibleTabState extends State<BibleTab> {
   /// Alterna a busca para restringir ao livro aberto.
   void _toggleBookOnly() {
     final q = _search.text.trim();
+    _invalidateSearch();
     setState(() {
       _searchBookOnly = !_searchBookOnly;
       if (_results != null) {
@@ -540,7 +563,8 @@ class _BibleTabState extends State<BibleTab> {
                         ),
                         onPressed: _back,
                       ),
-                    Expanded(
+                    Flexible(
+                      flex: 3,
                       child: Text(
                         _title,
                         style: TextStyle(
@@ -552,23 +576,26 @@ class _BibleTabState extends State<BibleTab> {
                       ),
                     ),
                     if (_results == null)
-                      GestureDetector(
-                        onTap: _showVersionDialog,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: t.light,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            _versionLabel,
-                            style: TextStyle(
-                              color: t.text,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: _showVersionDialog,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: t.light,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              _versionLabel,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: t.text,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -600,25 +627,28 @@ class _BibleTabState extends State<BibleTab> {
                         onPressed: _toggleBookOnly,
                       ),
                     const SizedBox(width: 8),
-                    SizedBox(
-                      width: 140,
-                      child: TextField(
-                        controller: _search,
-                        onChanged: _onQuery,
-                        style: TextStyle(color: t.text, fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Buscar ou ref.',
-                          hintStyle: TextStyle(color: t.muted, fontSize: 13),
-                          isDense: true,
-                          filled: true,
-                          fillColor: t.light,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
+                    Flexible(
+                      flex: 4,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 150),
+                        child: TextField(
+                          controller: _search,
+                          onChanged: _onQuery,
+                          style: TextStyle(color: t.text, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Buscar ou ref.',
+                            hintStyle: TextStyle(color: t.muted, fontSize: 13),
+                            isDense: true,
+                            filled: true,
+                            fillColor: t.light,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                         ),
                       ),
@@ -767,7 +797,13 @@ class _BibleTabState extends State<BibleTab> {
     final t = appTheme;
     final p = AppState.i.lastPosition;
     final bible = AppState.i.bible;
-    if (p == null || p.book >= bible.length) return const SizedBox.shrink();
+    if (p == null ||
+        p.book < 0 ||
+        p.book >= bible.length ||
+        p.chapter < 0 ||
+        p.chapter >= bible[p.book].chapters.length) {
+      return const SizedBox.shrink();
+    }
     final b = bible[p.book];
     final label = 'Continuar lendo · ${b.name} ${p.chapter + 1}';
     return Padding(
@@ -975,7 +1011,12 @@ class _BibleTabState extends State<BibleTab> {
     final children = <Widget>[_section('Recentes')];
     for (var i = 0; i < state.recent.length; i++) {
       final r = state.recent[i];
-      if (r.book >= bible.length) continue;
+      if (r.book < 0 ||
+          r.book >= bible.length ||
+          r.chapter < 0 ||
+          r.chapter >= bible[r.book].chapters.length) {
+        continue;
+      }
       final b = bible[r.book];
       final title = '${b.name} ${r.chapter + 1}';
       final sameVersion = r.version == AppState.i.version;
@@ -1697,8 +1738,12 @@ class _BibleTabState extends State<BibleTab> {
       text: '$ref  ${verses[v]}',
       highlightKey: key,
       note: AppState.i.getNote(key) ?? '',
-      onHighlightChanged: (_) => setState(() {}),
-      onNoteChanged: (_) => setState(() {}),
+      onHighlightChanged: (_) {
+        if (mounted) setState(() {});
+      },
+      onNoteChanged: (_) {
+        if (mounted) setState(() {});
+      },
       speakText: spoken,
       onCompare: () => _showComparison(
         bAbbr: b.abbr,
@@ -1851,8 +1896,24 @@ class _BibleTabState extends State<BibleTab> {
     if (selected == null || selected == current) return;
     final code = kVersionOrder[selected];
     TtsService.i.stop();
+    // Invalida buscas em andamento ANTES de trocar a tradução, senão a
+    // pesquisa antiga (com índices da versão anterior) pode aplicar
+    // resultados na nova tradução e estourar RangeError.
+    _invalidateSearch();
     setState(() => _loadingVersion = true);
-    await AppState.i.setVersion(code);
+    try {
+      await AppState.i.setVersion(code);
+    } catch (e) {
+      debugPrint('Falha ao trocar de tradução: $e');
+      if (!mounted) return;
+      setState(() => _loadingVersion = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível carregar a versão "$code".'),
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _loadingVersion = false;
@@ -1866,6 +1927,7 @@ class _BibleTabState extends State<BibleTab> {
       _bookIndex = null;
       _chapter = null;
       _focusVerse = null;
+      _searchBookOnly = false;
     });
     AppState.i.endReadingTheme();
     final p = AppState.i.positionOf(code);

@@ -238,30 +238,34 @@ Future<String?> _editNote(
 Future<String?> editNoteDialog(BuildContext context, [String initial = '']) async {
   final t = appTheme;
   final ctrl = TextEditingController(text: initial);
-  return showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: t.card,
-      title: Text('Anotação', style: TextStyle(color: t.text)),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        maxLines: 6,
-        style: TextStyle(color: t.text),
-        decoration: const InputDecoration(
-          hintText: 'Escreva sua nota sobre este versículo.',
+  try {
+    return await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: t.card,
+        title: Text('Anotação', style: TextStyle(color: t.text)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLines: 6,
+          style: TextStyle(color: t.text),
+          decoration: const InputDecoration(
+            hintText: 'Escreva sua nota sobre este versículo.',
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Salvar'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, null),
-          child: const Text('Cancelar'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-          child: const Text('Salvar'),
-        ),
-      ],
-    ),
-  );
+    );
+  } finally {
+    ctrl.dispose();
+  }
 }

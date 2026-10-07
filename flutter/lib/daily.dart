@@ -2,6 +2,10 @@ import 'models.dart';
 
 /// Versículos do dia (referência canônica em índices: livro, capítulo 0‑based,
 /// versículo 0‑based). A rotação é determinística por dia do ano, 100% offline.
+///
+/// A lista deve caber em um ano (≤ 366 entradas): a rotação é modulada pela
+/// quantidade de dias do ano, então qualquer entrada além de 366 jamais seria
+/// exibida. Mantenha `kDailyVerses.length <= 366`.
 const List<(int, int, int)> kDailyVerses = [
   // --- Antigo Testamento ---
   (0, 0, 0), // Gênesis 1:1
@@ -371,16 +375,6 @@ const List<(int, int, int)> kDailyVerses = [
   (65, 11, 14), // Apocalipse 12:15
   (65, 12, 9), // Apocalipse 13:10
   (65, 16, 14), // Apocalipse 17:15
-  (65, 19, 8), // Apocalipse 20:9
-  (65, 20, 3), // Apocalipse 21:4
-  (65, 20, 4), // Apocalipse 21:5
-  (65, 21, 2), // Apocalipse 22:3
-  (65, 21, 4), // Apocalipse 22:5
-  (65, 21, 5), // Apocalipse 22:6
-  (65, 21, 11), // Apocalipse 22:12
-  (65, 21, 16), // Apocalipse 22:17
-  (65, 21, 19), // Apocalipse 22:20
-  (65, 21, 20), // Apocalipse 22:21
 ];
 
 /// Dia do ano (1‑based) de [day]. Calculado em UTC: em horário local, um dia de
@@ -392,9 +386,11 @@ int dayOfYear(DateTime day) =>
 /// Seleciona o versículo do dia, girando pela lista de forma determinística.
 ///
 /// O índice é `(diaDoAno - 1) % tamanho`: sem o `-1` a primeira entrada da lista
-/// jamais seria exibida.
+/// jamais seria exibida. O limite defensivo de 366 mantém o índice sempre na
+/// parte alcançável da lista (ver doc de [kDailyVerses]).
 (int, int, int) dailyVerseFor(DateTime day) {
-  final index = (dayOfYear(day) - 1) % kDailyVerses.length;
+  final len = kDailyVerses.length > 366 ? 366 : kDailyVerses.length;
+  final index = (dayOfYear(day) - 1) % len;
   return kDailyVerses[index];
 }
 

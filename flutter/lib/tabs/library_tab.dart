@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../common.dart';
@@ -19,9 +21,11 @@ class _LibraryTabState extends State<LibraryTab> {
   String _query = '';
   String _docQuery = '';
   BibliotecaText? _current;
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     _docSearch.dispose();
     super.dispose();
@@ -84,7 +88,11 @@ class _LibraryTabState extends State<LibraryTab> {
                       width: 140,
                       child: TextField(
                         controller: _search,
-                        onChanged: (v) => setState(() => _query = v),
+                        onChanged: (v) {
+                          _debounce?.cancel();
+                          _debounce = Timer(const Duration(milliseconds: 250),
+                              () => setState(() => _query = v));
+                        },
                         style: TextStyle(color: t.text, fontSize: 14),
                         decoration: InputDecoration(
                           hintText: 'Buscar',
@@ -179,7 +187,11 @@ class _LibraryTabState extends State<LibraryTab> {
         const SizedBox(height: 8),
         TextField(
           controller: _docSearch,
-          onChanged: (v) => setState(() => _docQuery = v),
+          onChanged: (v) {
+            _debounce?.cancel();
+            _debounce = Timer(const Duration(milliseconds: 250),
+                () => setState(() => _docQuery = v));
+          },
           style: TextStyle(color: t.text, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Buscar neste documento',
@@ -286,8 +298,12 @@ class _LibraryTabState extends State<LibraryTab> {
         text: text,
         highlightKey: key,
         note: AppState.i.getNote(key) ?? '',
-        onHighlightChanged: (_) => setState(() {}),
-        onNoteChanged: (_) => setState(() {}),
+        onHighlightChanged: (_) {
+          if (mounted) setState(() {});
+        },
+        onNoteChanged: (_) {
+          if (mounted) setState(() {});
+        },
       ),
       child: Container(
         width: double.infinity,

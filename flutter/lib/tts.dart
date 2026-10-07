@@ -58,8 +58,10 @@ class FlutterTtsEngine implements TtsEngine {
   Future<void> setAwaitSpeechCompletion(bool awaitCompletion) async {
     try {
       await _tts.awaitSpeakCompletion(awaitCompletion);
-    } catch (_) {
-      // Recurso opcional — em plataformas sem suporte, segue sem esperar.
+    } catch (e) {
+      // Recurso opcional — em plataformas sem suporte, segue sem esperar,
+      // mas sem leitura verso a verso (fala só o fim de cada trecho).
+      debugPrint('awaitSpeakCompletion indisponível: $e');
     }
   }
 
@@ -202,6 +204,11 @@ class TtsService {
   List<String> queue = [];
   int cursor = 0;
   bool cancel = false;
+
+  /// Identificador da reprodução corrente. Cada novo `playChapter`/`speakOne`/
+  /// `resume`/`stop` incrementa — loops antigos abandonam assim que veem que a
+  /// sessão mudou, impedindo que reproduções velhas corrompam `queue`/`cursor`.
+  int _session = 0;
   Completer<void>? _completer;
 
   bool get isActive =>
@@ -210,6 +217,9 @@ class TtsService {
   bool _langReady = false;
   List<Map<String, String>> _voices = const [];
   String _appliedVoice = 'default';
+
+  /// Verdadeiro quando a voz real do gênero pedido está selecionada na engine.
+  bool _realVoiceApplied = false;
 
   Future<void> _ensureLanguage() async {
     if (_langReady) return;
@@ -233,8 +243,7 @@ class TtsService {
   /// tenta adivinhar pelo nome da voz.
   Map<String, String>? _pickVoice(String gender) {
     final pt = _voices
-        .where((v) =>
-            (v['locale'] ?? '').toLowerCase().startsWith('pt'))
+        .where((v) => (v['locale'] ?? '').toLowerCase().startsWith('pt'))
         .toList();
     for (var v in pt) {
       final g = (v['gender'] ?? '').toLowerCase();
@@ -245,7 +254,12 @@ class TtsService {
         : const ['male', 'masc', 'masculin', 'masculina'];
     for (var v in pt) {
       final name = (v['name'] ?? '').toLowerCase();
-      if (kws.any((k) => name.contains(k))) return v;
+      if (kws.any((k) => name.contains(k))) {
+        // "female" contém a substring "male" — não deixa o nome de uma voz
+        // feminina casar com a busca por voz masculina.
+        if (gender == 'male' && name.contains('female')) continue;
+        return v;
+      }
     }
     return null;
   }
@@ -264,30 +278,42 @@ class TtsService {
     final state = AppState.i;
     final wanted = state.ttsVoice;
 
-    bool genderApplied = false;
+    bool realVoice = _realVoiceApplied;
     if (wanted != 'default' && wanted != _appliedVoice && _voices.isNotEmpty) {
       final v = _pickVoice(wanted);
       final name = v?['name'] ?? '';
       if (name.isNotEmpty) {
-        await _engine.selectVoice(name, v?['locale'] ?? '');
-        genderApplied = true;
+        try {
+          await _engine.selectVoice(name, v?['locale'] ?? '');
+          realVoice = true;
+        } catch (e) {
+          debugPrint('Falha ao selecionar voz do TTS: $e');
+          realVoice = false;
+        }
+      } else {
+        // Sem voz do gênero instalada: simula pelo tom.
+        realVoice = false;
       }
+      _appliedVoice = wanted;
+    } else if (wanted == 'default') {
+      _appliedVoice = 'default';
+      realVoice = false;
     }
 
     var pitch = state.ttsPitch;
-    if (wanted != 'default') {
-      final usingRealVoice =
-          genderApplied || _appliedVoice.endsWith(':real');
-      if (!usingRealVoice) {
-        pitch = wanted == 'female'
-            ? (pitch * kSimFemalePitch).clamp(0.5, 2.0).toDouble()
-            : (pitch * kSimMalePitch).clamp(0.5, 2.0).toDouble();
-      }
+    if (wanted != 'default' && !realVoice) {
+      pitch = wanted == 'female'
+          ? (pitch * kSimFemalePitch).clamp(0.5, 2.0).toDouble()
+          : (pitch * kSimMalePitch).clamp(0.5, 2.0).toDouble();
     }
 
-    await _engine.setPitch(pitch);
-    await _engine.setSpeechRate(state.ttsRate);
-    _appliedVoice = genderApplied ? '$wanted:real' : wanted;
+    try {
+      await _engine.setPitch(pitch);
+      await _engine.setSpeechRate(state.ttsRate);
+    } catch (e) {
+      debugPrint('Falha ao aplicar tom/velocidade do TTS: $e');
+    }
+    _realVoiceApplied = realVoice;
   }
 
   void _release() {
@@ -295,31 +321,58 @@ class TtsService {
     if (c != null && !c.isCompleted) c.complete();
   }
 
-  Future<void> _speakOne(String text) {
-    return _ensureLanguage().then((_) => _applyVoice()).then((_) {
-      cancel = false;
-      final c = Completer<void>();
-      _completer = c;
-      _engine.speak(text).then((_) {
-        if (!c.isCompleted) c.complete();
-      }).catchError((_) {
-        if (!c.isCompleted) c.complete();
-      });
-      return c.future;
+  /// Fala um trecho, aguardando o fim da elocução. Se uma pausa/parada for
+  /// pedida durante a preparação (idioma/voz), desiste sem falar e sem apagar
+  /// o pedido de cancelamento — ao contrário do comportamento antigo, que
+  /// reescrevia `cancel = false` e ignorava o comando do usuário.
+  Future<void> _speakOne(String text) async {
+    try {
+      await _ensureLanguage();
+    } catch (e) {
+      debugPrint('Falha ao preparar idioma do TTS: $e');
+    }
+    try {
+      await _applyVoice();
+    } catch (e) {
+      debugPrint('Falha ao aplicar voz do TTS: $e');
+    }
+    if (cancel) return;
+    final c = Completer<void>();
+    _completer = c;
+    _engine.speak(text).then((_) {
+      if (!c.isCompleted) c.complete();
+    }).catchError((_) {
+      if (!c.isCompleted) c.complete();
     });
+    return c.future;
   }
 
-  Future<void> _loop() async {
-    while (!cancel && cursor < queue.length) {
-      index.value = cursor;
-      await _speakOne(queue[cursor]);
-      cursor++;
-    }
-    if (!cancel) {
-      phase.value = TtsPhase.none;
-      index.value = null;
-      queue = [];
-      cursor = 0;
+  /// Percorre a fila verso a verso. `session` é a geração da reprodução que
+  /// iniciou o loop: se outra reprodução/pausa/parada assumir (via `_session`),
+  /// este loop abandona imediatamente sem tocar em `queue`/`cursor`.
+  Future<void> _loop(int session) async {
+    try {
+      while (!cancel && session == _session && cursor < queue.length) {
+        index.value = cursor;
+        await _speakOne(queue[cursor]);
+        if (session != _session) return;
+        if (cancel) return; // interrompido durante o versículo: não avança
+        cursor++;
+      }
+      if (session == _session && !cancel && cursor >= queue.length) {
+        phase.value = TtsPhase.none;
+        index.value = null;
+        queue = [];
+        cursor = 0;
+      }
+    } catch (e) {
+      debugPrint('Erro inesperado no TTS: $e');
+      if (session == _session) {
+        phase.value = TtsPhase.none;
+        index.value = null;
+        queue = [];
+        cursor = 0;
+      }
     }
   }
 
@@ -328,22 +381,25 @@ class TtsService {
   Future<void> playChapter(List<String> items) async {
     if (items.isEmpty) return;
     if (isActive) await stop();
+    _session++;
     queue = List.of(items);
     cursor = 0;
     cancel = false;
     phase.value = TtsPhase.playing;
-    await _loop();
+    await _loop(_session);
   }
 
-  /// Lê um único texto (ex.: um versículo) e encerra.
+  /// Lê um único texto (ex.: um versículo) e encerra. Tratado como uma fila
+  /// de um item para que pausar/retomar o versículo funcione de forma única.
   Future<void> speakOne(String text) async {
+    if (text.isEmpty) return;
     if (isActive) await stop();
+    _session++;
+    queue = [text];
+    cursor = 0;
+    cancel = false;
     phase.value = TtsPhase.playing;
-    index.value = null;
-    await _speakOne(text);
-    if (!isActive) return;
-    phase.value = TtsPhase.none;
-    index.value = null;
+    await _loop(_session);
   }
 
   /// Pausa a leitura do capítulo (mantém a posição atual).
@@ -351,23 +407,35 @@ class TtsService {
     if (phase.value != TtsPhase.playing) return;
     cancel = true;
     phase.value = TtsPhase.paused;
-    await _engine.stop();
+    try {
+      await _engine.stop();
+    } catch (e) {
+      debugPrint('Erro ao pausar TTS: $e');
+    }
     _release();
   }
 
   /// Continua do versículo em que a leitura foi pausada.
   Future<void> resume() async {
     if (phase.value != TtsPhase.paused) return;
-    if (queue.isEmpty) return; // fila corrompida ou limpa: não resetar
-    if (cursor >= queue.length) cursor = 0;
+    if (queue.isEmpty || cursor >= queue.length) {
+      // Fila limpa/corrompida ou capítulo já concluído: não reinicia sozinho.
+      return;
+    }
+    _session++;
     cancel = false;
     phase.value = TtsPhase.playing;
-    await _loop();
+    await _loop(_session);
   }
 
   Future<void> stop() async {
+    _session++;
     cancel = true;
-    await _engine.stop();
+    try {
+      await _engine.stop();
+    } catch (e) {
+      debugPrint('Erro ao parar TTS: $e');
+    }
     _release();
     queue = [];
     cursor = 0;

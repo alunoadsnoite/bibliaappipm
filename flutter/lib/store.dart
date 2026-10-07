@@ -30,7 +30,7 @@ const String kAppName = 'Bíblia IPM';
 
 /// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
 /// pelo valor real do pacote via [PackageInfo].
-const String kAppVersion = '5.2.5';
+const String kAppVersion = '5.3.0';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -44,11 +44,29 @@ const MethodChannel _widgetChannel =
 /// interface na leitura de arquivos grandes (ex.: 4 MB por tradução).
 List<dynamic> _decodeBibleJson(String text) => jsonDecode(text) as List<dynamic>;
 
+/// Cast seguro com retorno `null` se o tipo não bater — evita `TypeError` ao
+/// processar dados vindos de fora (canal nativo, backup editado à mão).
+T? _as<T>(Object? v) => v is T ? v : null;
+
 class AppState extends ChangeNotifier {
   AppState._();
   static final AppState i = AppState._();
 
   late SharedPreferences prefs;
+
+  /// Obtém o SharedPreferences sem deixar o app nascer sem ele: se o canal de
+  /// plataforma falhar, cai num armazenamento em memória para a sessão.
+  Future<SharedPreferences> _initPrefs() async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (e) {
+      debugPrint('SharedPreferences indisponível, usando memória: $e');
+      // Necessário para cair no armazenamento em memória mesmo sem o plugin.
+      // ignore: invalid_use_of_visible_for_testing_member
+      SharedPreferences.setMockInitialValues({});
+      return await SharedPreferences.getInstance();
+    }
+  }
 
   /// Traduções já carregadas em memória (carga sob demanda via
   /// [_ensureBible]).
@@ -92,9 +110,19 @@ class AppState extends ChangeNotifier {
   Set<String> readChapters = {};
   Map<String, int> readsByDay = {};
 
+  /// Dia ("ano-mês-dia") em que cada capítulo foi lido, para o desmarcar
+  /// corrigir a contagem do dia certo (e não o de hoje).
+  Map<String, String> readDayByChapter = {};
+
   Future<void> load() async {
-    prefs = await SharedPreferences.getInstance();
-    await _migrateFromNative();
+    prefs = await _initPrefs();
+    // O cache de posição reflete o conteúdo das preferências; se o store for
+    // recarregado (ou redefinido), valores antigos ficariam errados.
+    _positionCache.clear();
+    // O handler do widget é registrado cedo: mesmo que algum passo opcional
+    // abaixo falhe, o Android ainda responde ao pedido do versículo do dia.
+    _widgetChannel.setMethodCallHandler(_handleWidgetCall);
+    await _optional('migração nativa', _migrateFromNative);
     try {
       final info = await PackageInfo.fromPlatform();
       appVersion = info.version;
@@ -122,8 +150,12 @@ class AppState extends ChangeNotifier {
       ttsVoice = 'default';
     }
 
-    // Carrega apenas a tradução ativa; as demais entram sob demanda.
-    bible = await _ensureBible(version);
+    // Carrega apenas a tradução ativa; as demais entram sob demanda. Uma
+    // falha aqui não pode derrubar o resto da inicialização (hinário, notas,
+    // plano e biblioteca continuam carregando).
+    await _optional('bíblia', () async {
+      bible = await _ensureBible(version);
+    });
     await _optional('versículo do dia', _saveDailyVerse);
 
     await _optional('hinário', () async {
@@ -154,8 +186,6 @@ class AppState extends ChangeNotifier {
 
     loaded = true;
     notifyListeners();
-
-    _widgetChannel.setMethodCallHandler(_handleWidgetCall);
   }
 
   /// Executa uma etapa opcional do [load] sem impedir a partida do app.
@@ -205,61 +235,67 @@ class AppState extends ChangeNotifier {
       data = await _migrationChannel.invokeMethod<Map<dynamic, dynamic>>(
         'readNativeData',
       );
-    } catch (_) {
-      data = null;
+    } catch (error, stack) {
+      // Canal indisponível neste aparelho: NÃO marca como migrado, para
+      // tentar de novo na próxima inicialização.
+      debugPrint('Migração nativa indisponível: $error\n$stack');
+      return;
     }
 
-    if (data != null) {
-      final theme = data['theme'] as int?;
-      final night = data['night'] as bool?;
-      if (!prefs.containsKey('theme')) {
-        if (theme != null) {
-          await prefs.setInt('theme', theme);
-        } else if (night == true) {
-          await prefs.setInt('theme', 1);
+    if (data == null) {
+      await prefs.setBool('migrated_native_v1', true);
+      return;
+    }
+
+    final theme = _as<int>(data['theme']);
+    final night = _as<bool>(data['night']);
+    if (!prefs.containsKey('theme')) {
+      if (theme != null) {
+        await prefs.setInt('theme', theme);
+      } else if (night == true) {
+        await prefs.setInt('theme', 1);
+      }
+    }
+    final font = _as<num>(data['fontScale'])?.toDouble();
+    if (font != null && !prefs.containsKey('font_scale')) {
+      await prefs.setDouble('font_scale', font);
+    }
+    final savedVersion = _as<String>(data['version']);
+    if (savedVersion != null && !prefs.containsKey('biblia_version')) {
+      await prefs.setString('biblia_version', savedVersion);
+    }
+
+    final highlights = data['highlights'];
+    if (highlights is Map) {
+      for (var entry in highlights.entries) {
+        final key = 'hl_${entry.key}';
+        final value = entry.value;
+        if (value is int && !prefs.containsKey(key)) {
+          await prefs.setInt(key, value);
         }
       }
-      final font = (data['fontScale'] as num?)?.toDouble();
-      if (font != null && !prefs.containsKey('font_scale')) {
-        await prefs.setDouble('font_scale', font);
-      }
-      final savedVersion = data['version'] as String?;
-      if (savedVersion != null && !prefs.containsKey('biblia_version')) {
-        await prefs.setString('biblia_version', savedVersion);
-      }
+    }
 
-      final highlights = data['highlights'];
-      if (highlights is Map) {
-        for (var entry in highlights.entries) {
-          final key = 'hl_${entry.key}';
-          final value = entry.value;
-          if (value is int && !prefs.containsKey(key)) {
-            await prefs.setInt(key, value);
-          }
+    final songs = _as<String>(data['songs']);
+    if (songs != null &&
+        songs.trim().isNotEmpty &&
+        !prefs.containsKey('songs_json')) {
+      try {
+        if (jsonDecode(songs) is List) {
+          await prefs.setString('songs_json', songs);
         }
-      }
+      } catch (_) {}
+    }
 
-      final songs = data['songs'] as String?;
-      if (songs != null &&
-          songs.trim().isNotEmpty &&
-          !prefs.containsKey('songs_json')) {
-        try {
-          if (jsonDecode(songs) is List) {
-            await prefs.setString('songs_json', songs);
-          }
-        } catch (_) {}
-      }
-
-      final boletim = data['boletim'] as String?;
-      if (boletim != null &&
-          boletim.trim().isNotEmpty &&
-          !prefs.containsKey('boletim_json')) {
-        try {
-          if (jsonDecode(boletim) is Map) {
-            await prefs.setString('boletim_json', boletim);
-          }
-        } catch (_) {}
-      }
+    final boletim = _as<String>(data['boletim']);
+    if (boletim != null &&
+        boletim.trim().isNotEmpty &&
+        !prefs.containsKey('boletim_json')) {
+      try {
+        if (jsonDecode(boletim) is Map) {
+          await prefs.setString('boletim_json', boletim);
+        }
+      } catch (_) {}
     }
 
     await prefs.setBool('migrated_native_v1', true);
@@ -404,13 +440,30 @@ class AppState extends ChangeNotifier {
     return vs != null && vs.contains(verse + 1);
   }
 
+  /// Faturas de carga em andamento, por código — evita ler duas vezes o mesmo
+  /// arquivo de ~4 MB quando duas chamadas concorrentes pedem a tradução.
+  final Map<String, Future<List<Book>>> _bibleLoads = {};
+
   Future<List<Book>> _ensureBible(String code) async {
     final cached = _bibleCache[code];
     if (cached != null) return cached;
+    final inFlight = _bibleLoads[code];
+    if (inFlight != null) return inFlight;
+    final future = _doEnsureBible(code);
+    _bibleLoads[code] = future;
+    try {
+      return await future;
+    } finally {
+      _bibleLoads.remove(code);
+    }
+  }
+
+  Future<List<Book>> _doEnsureBible(String code) async {
     final asset = kVersionAssets[code];
     if (asset == null) {
-      return _bibleCache['jfaal'] ??
-        await _loadBible(kVersionAssets['jfaal']!);
+      // Código desconhecido: cai na tradução padrão (jfaal), que passa pela
+      // mesma via de cache acima — o resultado fica gravado em `_bibleCache`.
+      return _ensureBible('jfaal');
     }
     final books = await _loadBible(asset);
     _bibleCache[code] = books;
@@ -558,13 +611,25 @@ class AppState extends ChangeNotifier {
   }
 
   /// Define a tradução ativa, carregando-a sob demanda caso ainda não esteja
-  /// em memória.
+  /// em memória. Só muda o estado depois que a carga tiver sucesso — se o
+  /// asset falhar, `version` e `bible` permanecem os da tradução atual e o
+  /// erro é propagado para a UI tratar.
   Future<void> setVersion(String code) async {
     if (!kVersionOrder.contains(code)) return;
+    final next = await _ensureBible(code);
+    final wasVersion = version;
+    final wasBible = bible;
     version = code;
-    bible = await _ensureBible(code);
-    await prefs.setString('biblia_version', code);
-    await _saveDailyVerse();
+    bible = next;
+    try {
+      await prefs.setString('biblia_version', code);
+      await _saveDailyVerse();
+    } catch (error, stack) {
+      version = wasVersion;
+      bible = wasBible;
+      debugPrint('Falha ao persistir tradução "$code": $error\n$stack');
+      rethrow;
+    }
     notifyListeners();
   }
 
@@ -596,29 +661,31 @@ class AppState extends ChangeNotifier {
 
   String get _positionKey => 'lastpos_$version';
 
-  /// Última posição lida na versão atual (ou `null`).
-  Position? get lastPosition {
-    final raw = prefs.getString(_positionKey);
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      return Position.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-    } catch (_) {
-      return null;
-    }
-  }
+  /// Cache da última posição por versão — evita `jsonDecode` a cada build do
+  /// card "Continuar lendo" (o vetor de estado notifica a raiz a cada
+  /// evento, reconstruindo as abas).
+  final Map<String, Position> _positionCache = {};
+
+  /// Última posição lida na versão ativa (ou `null`).
+  Position? get lastPosition => positionOf(version);
 
   /// Última posição lida em uma versão específica (ou `null`).
   Position? positionOf(String v) {
+    final cached = _positionCache[v];
+    if (cached != null) return cached;
     final raw = prefs.getString('lastpos_$v');
     if (raw == null || raw.isEmpty) return null;
     try {
-      return Position.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final p = Position.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      _positionCache[v] = p;
+      return p;
     } catch (_) {
       return null;
     }
   }
 
   Future<void> savePosition(int book, int chapter) async {
+    _positionCache[_positionKey] = Position(book, chapter);
     await prefs.setString(
         _positionKey, jsonEncode(Position(book, chapter).toJson()));
   }
@@ -693,11 +760,13 @@ class AppState extends ChangeNotifier {
 
   bool get planEnabled => prefs.getBool('plan_enabled') ?? true;
 
-  int get dailyGoal => prefs.getInt('plan_daily_goal') ?? kDefaultDailyGoal;
+  int get dailyGoal =>
+      (prefs.getInt('plan_daily_goal') ?? kDefaultDailyGoal).clamp(1, 10);
 
   void _loadPlan() {
     readChapters = {};
     readsByDay = {};
+    readDayByChapter = {};
     final raw = prefs.getString('read_chapters');
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -714,6 +783,19 @@ class AppState extends ChangeNotifier {
         readsByDay = obj.map((k, v) => MapEntry(k, (v as num).toInt()));
       } catch (_) {
         readsByDay = {};
+      }
+    }
+    final dayMap = prefs.getString('read_day_by_chapter');
+    if (dayMap != null && dayMap.isNotEmpty) {
+      try {
+        final obj = jsonDecode(dayMap) as Map<String, dynamic>;
+        readDayByChapter = {};
+        for (final e in obj.entries) {
+          final v = e.value;
+          readDayByChapter[e.key] = v is String ? v : '';
+        }
+      } catch (_) {
+        readDayByChapter = {};
       }
     }
   }
@@ -749,43 +831,52 @@ class AppState extends ChangeNotifier {
   /// de hoje (ou de ontem, se hoje ainda não leu).
   int get streak {
     var n = 0;
-    var day = DateTime.now();
+    final now = DateTime.now();
+    var day = DateTime(now.year, now.month, now.day);
     if ((readsByDay[_dateKey(day)] ?? 0) == 0) {
-      day = day.subtract(const Duration(days: 1));
+      day = DateTime(day.year, day.month, day.day - 1);
     }
     while ((readsByDay[_dateKey(day)] ?? 0) > 0) {
       n++;
-      day = day.subtract(const Duration(days: 1));
+      day = DateTime(day.year, day.month, day.day - 1);
     }
     return n;
   }
 
   /// Marca um capítulo como lido (índices canônicos). A contagem do dia só
-  /// aumenta na primeira vez que o capítulo é marcado.
+  /// aumenta na primeira vez que o capítulo é marcado; reabrir um capítulo
+  /// já marcado não reescreve as preferências.
   Future<void> markChapterRead(int book, int chapter) async {
     final key = '$book:$chapter';
     if (readChapters.add(key)) {
       final day = _todayKey;
       readsByDay[day] = (readsByDay[day] ?? 0) + 1;
+      readDayByChapter[key] = day;
       await prefs.setString('reads_by_day', jsonEncode(readsByDay));
+      await prefs.setString(
+          'read_day_by_chapter', jsonEncode(readDayByChapter));
+      await prefs.setString(
+          'read_chapters', jsonEncode(readChapters.toList()..sort()));
+    }
+    notifyListeners();
+  }
+
+  /// Desmarca um capítulo lido (para correção manual). A contagem diária é
+  /// debitada do dia em que o capítulo foi realmente lido (não do dia atual).
+  Future<void> unmarkChapterRead(int book, int chapter) async {
+    final key = '$book:$chapter';
+    if (!readChapters.remove(key)) return;
+    final readOn = readDayByChapter.remove(key);
+    if (readOn != null) {
+      final v = (readsByDay[readOn] ?? 0) - 1;
+      readsByDay[readOn] = v < 0 ? 0 : v;
+      await prefs.setString('reads_by_day', jsonEncode(readsByDay));
+      await prefs.setString(
+          'read_day_by_chapter', jsonEncode(readDayByChapter));
     }
     await prefs.setString(
         'read_chapters', jsonEncode(readChapters.toList()..sort()));
     notifyListeners();
-  }
-
-  /// Desmarca um capítulo lido (para correção manual).
-  Future<void> unmarkChapterRead(int book, int chapter) async {
-    final key = '$book:$chapter';
-    if (readChapters.remove(key)) {
-      final day = _todayKey;
-      final v = (readsByDay[day] ?? 0) - 1;
-      readsByDay[day] = v < 0 ? 0 : v;
-      await prefs.setString('reads_by_day', jsonEncode(readsByDay));
-      await prefs.setString(
-          'read_chapters', jsonEncode(readChapters.toList()..sort()));
-      notifyListeners();
-    }
   }
 
   void setPlanEnabled(bool enabled) {
@@ -818,7 +909,13 @@ class AppState extends ChangeNotifier {
   int getHighlight(String key) => prefs.getInt('hl_$key') ?? -1;
 
   Future<void> setHighlight(String key, int colorIndex) async {
-    await prefs.setInt('hl_$key', colorIndex);
+    if (colorIndex < 0) {
+      // Limpar REMOVE a preferência; o antigo gravava `hl_*= -1` para sempre,
+      // acumulando entradas mortas que entravam em backups e restaurações.
+      await prefs.remove('hl_$key');
+    } else {
+      await prefs.setInt('hl_$key', colorIndex);
+    }
     notifyListeners();
   }
 
@@ -827,7 +924,8 @@ class AppState extends ChangeNotifier {
     for (var key in prefs.getKeys()) {
       if (!key.startsWith('hl_')) continue;
       final v = prefs.getInt(key);
-      if (v != null) map[key.substring(3)] = v;
+      // Ignora tombstones do formato antigo (hl_*= -1) na exportação.
+      if (v != null && v >= 0) map[key.substring(3)] = v;
     }
     return map;
   }
@@ -836,6 +934,17 @@ class AppState extends ChangeNotifier {
 
   /// Serializa todos os dados do usuário para exportação/backup.
   String buildExportJson() {
+    final positions = <String, dynamic>{};
+    for (final v in kVersionOrder) {
+      final raw = prefs.getString('lastpos_$v');
+      if (raw == null || raw.isEmpty) continue;
+      try {
+        positions[v] = jsonDecode(raw);
+      } catch (error, stack) {
+        // Uma posição corrompida não pode abortar o backup inteiro.
+        debugPrint('Posição inválida em backup ($v): $error\n$stack');
+      }
+    }
     return jsonEncode({
       'app': kAppName,
       'export': 1,
@@ -847,6 +956,8 @@ class AppState extends ChangeNotifier {
       'tts_rate': ttsRate,
       'tts_pitch': ttsPitch,
       'tts_voice': ttsVoice,
+      'plan_enabled': planEnabled,
+      'plan_daily_goal': dailyGoal,
       'highlights': _allHighlights(),
       'notes': notes,
       'songs': parseSongsJson(songs),
@@ -854,12 +965,9 @@ class AppState extends ChangeNotifier {
       'eventos': events.map((e) => e.toJson()).toList(),
       'read_chapters': readChapters.toList(),
       'reads_by_day': readsByDay,
+      'read_day_by_chapter': readDayByChapter,
       'recent': recent.map((r) => r.toJson()).toList(),
-      'positions': {
-        for (final v in kVersionOrder)
-          if (prefs.getString('lastpos_$v') != null)
-            v: jsonDecode(prefs.getString('lastpos_$v')!),
-      },
+      'positions': positions,
     });
   }
 
@@ -913,16 +1021,28 @@ class AppState extends ChangeNotifier {
 
     final birthdaysIn = data['aniversariantes'];
     final eventosIn = data['eventos'];
-    if (birthdaysIn is List || eventosIn is List) {
+    // Cada seção é restaurada de forma independente: um backup que só tem
+    // eventos NÃO apaga os aniversariantes locais (e vice-versa).
+    if (birthdaysIn is List) {
       try {
-        birthdays = ((birthdaysIn as List<dynamic>?) ?? [])
+        birthdays = birthdaysIn
             .map((e) => Birthday.fromJson(e as Map<String, dynamic>))
             .toList();
-        events = ((eventosIn as List<dynamic>?) ?? [])
+      } catch (error, stack) {
+        debugPrint('Aniversariantes inválidos no backup: $error\n$stack');
+      }
+    }
+    if (eventosIn is List) {
+      try {
+        events = eventosIn
             .map((e) => ChurchEvent.fromJson(e as Map<String, dynamic>))
             .toList();
-        await saveBoletim();
-      } catch (_) {}
+      } catch (error, stack) {
+        debugPrint('Eventos inválidos no backup: $error\n$stack');
+      }
+    }
+    if (birthdaysIn is List || eventosIn is List) {
+      await saveBoletim();
     }
 
     final read = data['read_chapters'];
@@ -934,9 +1054,32 @@ class AppState extends ChangeNotifier {
       await prefs.setString(
           'read_chapters', jsonEncode(readChapters.toList()..sort()));
     }
+    final dayMap = data['read_day_by_chapter'];
+    // Dias conhecidos locais, para não contar em dobro na recomputação abaixo.
+    final localDays = {...readDayByChapter};
+    final importedDays = <String, String>{};
+    if (dayMap is Map) {
+      for (var e in dayMap.entries) {
+        final v = e.value;
+        if (v is String && v.isNotEmpty) importedDays[e.key.toString()] = v;
+      }
+      readDayByChapter = {...readDayByChapter, ...importedDays};
+      await prefs.setString(
+          'read_day_by_chapter', jsonEncode(readDayByChapter));
+    }
+    // Recalcula as contagens diárias a partir do mapeamento de dia, garantindo
+    // coerência com readChapters (um restore que sobrescrevia reads_by_day
+    // deixava dados contraditórios). Capítulos já contados localmente não são
+    // somados de novo.
     final reads = data['reads_by_day'];
     if (reads is Map) {
-      readsByDay = reads.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+      final merged = <String, int>{...readsByDay};
+      for (final entry in importedDays.entries) {
+        if (localDays.containsKey(entry.key)) continue;
+        final day = entry.value;
+        merged[day] = (merged[day] ?? 0) + 1;
+      }
+      readsByDay = merged;
       await prefs.setString('reads_by_day', jsonEncode(readsByDay));
     }
 
@@ -963,6 +1106,8 @@ class AppState extends ChangeNotifier {
               'lastpos_${e.key}', jsonEncode(p.toJson()));
         } catch (_) {}
       }
+      // O cache em memória pode ter valores antigos da sessão atual.
+      _positionCache.clear();
     }
 
     final savedVersion = data['version'];
@@ -990,6 +1135,11 @@ class AppState extends ChangeNotifier {
     if (pitch is num) setTtsPitch(pitch.toDouble());
     final voice = data['tts_voice'];
     if (voice is String) setTtsVoice(voice);
+
+    final planOn = data['plan_enabled'];
+    if (planOn is bool) setPlanEnabled(planOn);
+    final goal = data['plan_daily_goal'];
+    if (goal is num) setDailyGoal(goal.toInt());
 
     notifyListeners();
   }
