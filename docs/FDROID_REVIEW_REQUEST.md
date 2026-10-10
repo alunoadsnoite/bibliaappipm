@@ -1,5 +1,7 @@
 # Bíblia IPM — request for preliminary inclusion review (asset licensing unresolved)
 
+Solicitação publicada e aberta em 10/10/2026: https://gitlab.com/fdroid/rfp/-/work_items/4547. A descrição publicada foi adaptada ao formulário e deixa explícitas as pendências de licenciamento. O texto abaixo registra a preparação original.
+
 Hello F-Droid maintainers,
 
 I am requesting a preliminary review of Bíblia IPM and guidance on the remaining requirements for inclusion. This is not a claim that all inclusion requirements have been met.

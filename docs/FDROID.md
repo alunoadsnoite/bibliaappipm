@@ -1,13 +1,13 @@
 # Inclusão no catálogo oficial do F-Droid
 
-Estado: preparação em andamento; o aplicativo ainda não foi submetido nem publicado no catálogo oficial.
+Estado: solicitação de avaliação preliminar publicada em 10/10/2026 e aberta em https://gitlab.com/fdroid/rfp/-/work_items/4547. A pendência das licenças foi explicitamente informada. O aplicativo ainda não foi aprovado nem publicado no catálogo oficial.
 
 ## Código e versão
 
 - Repositório: https://github.com/alunoadsnoite/bibliaappipm
 - Código principal: `flutter/` (a aplicação Java na raiz é legada).
 - Application ID: `br.com.valdenor.bibliaapp`.
-- Versão: `5.4.0`, versionCode `32`, tag prevista `v5.4.0`.
+- Versão: `5.4.0`, versionCode `32`, tag publicada `v5.4.0`.
 - Licença do código: MIT. A licença não cobre os conteúdos dos assets.
 - Flutter usado na validação local: commit `abaf9c523780a608bd46686fd5e53740a07077f8`.
 - Descrições, ícone e changelog: `fastlane/metadata/android/` em português e inglês.
@@ -35,6 +35,8 @@ A publicação do desenvolvedor utiliza `flutter/android/key.properties` e a cha
 O empacotador precisa fixar a revisão do Flutter, configurar a compilação em `flutter/`, verificar as dependências e testar a receita no ambiente do fdroidserver. A compilação local de um APK não comprova validação no ambiente oficial.
 
 ## Envio
+
+O pedido de avaliação preliminar está registrado na issue #4547 do tracker Requests For Packaging. A descrição inclui os links do código e do APK, a versão e a licença MIT limitada ao código; a checklist não declara conformidade já comprovada.
 
 Após documentar as licenças e testar a receita de compilação, abrir uma merge request de metadados em https://gitlab.com/fdroid/fdroiddata, conforme o guia oficial. É necessária uma sessão autenticada no GitLab. A aceitação, assinatura e publicação no catálogo dependem dos mantenedores do F-Droid.
 
