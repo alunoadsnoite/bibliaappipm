@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../common.dart';
+import '../data_files.dart';
 import '../models.dart';
 import '../store.dart';
 
@@ -19,10 +20,13 @@ class _BoletimTabState extends State<BoletimTab> {
 
   List<Birthday> get _today {
     final now = DateTime.now();
-    final list = AppState.i.birthdays
-        .where((b) => b.day == now.day && b.month == now.month)
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final list =
+        AppState.i.birthdays
+            .where((b) => b.day == now.day && b.month == now.month)
+            .toList()
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
     return list;
   }
 
@@ -36,8 +40,7 @@ class _BoletimTabState extends State<BoletimTab> {
         return !dt.isBefore(todayStart);
       }
       return dt.isAfter(now);
-    }).toList()
-      ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    }).toList()..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     return list;
   }
 
@@ -56,27 +59,101 @@ class _BoletimTabState extends State<BoletimTab> {
                 children: [
                   if (_editing)
                     IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new,
-                          size: 20, color: t.primary),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 20,
+                        color: t.primary,
+                      ),
                       onPressed: () => setState(() => _editing = false),
                     ),
                   Expanded(
                     child: Text(
                       'Boletim',
                       style: TextStyle(
-                          color: t.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
+                        color: t.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Compartilhar ou importar boletim',
+                    onSelected: (action) async {
+                      try {
+                        if (action == 'share') {
+                          await shareJsonFile(
+                            context,
+                            AppState.i.exportBoletim(),
+                            'biblia-ipm-boletim.json',
+                          );
+                        } else {
+                          final raw = await openJsonFile();
+                          if (raw == null || !context.mounted) return;
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Importar boletim'),
+                              content: const Text(
+                                'Adicionar aniversariantes e eventos deste arquivo? Itens iguais não serão duplicados.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancelar'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Importar'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm != true) return;
+                          await AppState.i.importBoletim(raw);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Boletim importado.'),
+                              ),
+                            );
+                          }
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Não foi possível processar o arquivo de boletim.',
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'share',
+                        child: Text('Compartilhar arquivo do boletim'),
+                      ),
+                      PopupMenuItem(
+                        value: 'import',
+                        child: Text('Importar arquivo do boletim'),
+                      ),
+                    ],
                   ),
                   TextButton.icon(
                     onPressed: () => setState(() => _editing = !_editing),
-                    icon: Icon(_editing ? Icons.check : Icons.edit,
-                        size: 18, color: t.accent),
+                    icon: Icon(
+                      _editing ? Icons.check : Icons.edit,
+                      size: 18,
+                      color: t.accent,
+                    ),
                     label: Text(
                       _editing ? 'Concluir' : 'Editar',
                       style: TextStyle(
-                          color: t.accent, fontWeight: FontWeight.bold),
+                        color: t.accent,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -115,8 +192,10 @@ class _BoletimTabState extends State<BoletimTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(e.title,
-                    style: _cardText.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  e.title,
+                  style: _cardText.copyWith(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   _eventSubtitle(e),
@@ -184,7 +263,10 @@ class _BoletimTabState extends State<BoletimTab> {
   }
 
   TextStyle get _cardText => TextStyle(
-      color: appTheme.text, fontSize: 16, fontWeight: FontWeight.normal);
+    color: appTheme.text,
+    fontSize: 16,
+    fontWeight: FontWeight.normal,
+  );
 
   String _eventSubtitle(ChurchEvent e) {
     final date = '${_pad(e.day)}/${_pad(e.month)}/${e.year}';
@@ -200,11 +282,14 @@ class _BoletimTabState extends State<BoletimTab> {
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
-                style: TextStyle(
-                    color: t.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold)),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: t.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           if (onAdd != null)
             IconButton(
@@ -270,8 +355,9 @@ class _BoletimTabState extends State<BoletimTab> {
             return AlertDialog(
               backgroundColor: t.card,
               title: Text(
-                  index == null ? 'Novo aniversariante' : 'Editar aniversariante',
-                  style: TextStyle(color: t.text)),
+                index == null ? 'Novo aniversariante' : 'Editar aniversariante',
+                style: TextStyle(color: t.text),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -294,26 +380,29 @@ class _BoletimTabState extends State<BoletimTab> {
                     if (error != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text(error!,
-                            style: TextStyle(color: t.redText, fontSize: 12)),
+                        child: Text(
+                          error!,
+                          style: TextStyle(color: t.redText, fontSize: 12),
+                        ),
                       ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Cancelar')),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar'),
+                ),
                 TextButton(
                   onPressed: () {
                     final n = name.text.trim();
                     final msg = n.isEmpty
                         ? 'Informe o nome.'
                         : m == null || m < 1 || m > 12
-                            ? 'Mês inválido.'
-                            : d == null || d < 1 || d > 31
-                                ? 'Dia inválido.'
-                                : null;
+                        ? 'Mês inválido.'
+                        : d == null || d < 1 || d > 31
+                        ? 'Dia inválido.'
+                        : null;
                     if (msg != null) {
                       setDialogState(() => error = msg);
                       return;
@@ -384,8 +473,10 @@ class _BoletimTabState extends State<BoletimTab> {
             }
             return AlertDialog(
               backgroundColor: t.card,
-              title: Text(index == null ? 'Novo evento' : 'Editar evento',
-                  style: TextStyle(color: t.text)),
+              title: Text(
+                index == null ? 'Novo evento' : 'Editar evento',
+                style: TextStyle(color: t.text),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -393,8 +484,9 @@ class _BoletimTabState extends State<BoletimTab> {
                     TextField(
                       controller: title,
                       style: TextStyle(color: t.text),
-                      decoration:
-                          const InputDecoration(hintText: 'Título do evento'),
+                      decoration: const InputDecoration(
+                        hintText: 'Título do evento',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -410,41 +502,46 @@ class _BoletimTabState extends State<BoletimTab> {
                     TextField(
                       controller: time,
                       style: TextStyle(color: t.text),
-                      decoration:
-                          const InputDecoration(hintText: 'Hora (opcional)'),
+                      decoration: const InputDecoration(
+                        hintText: 'Hora (opcional)',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: note,
                       style: TextStyle(color: t.text),
                       decoration: const InputDecoration(
-                          hintText: 'Observação (opcional)'),
+                        hintText: 'Observação (opcional)',
+                      ),
                     ),
                     if (error != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text(error!,
-                            style: TextStyle(color: t.redText, fontSize: 12)),
+                        child: Text(
+                          error!,
+                          style: TextStyle(color: t.redText, fontSize: 12),
+                        ),
                       ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Cancelar')),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar'),
+                ),
                 TextButton(
                   onPressed: () {
                     final ttl = title.text.trim();
                     final msg = ttl.isEmpty
                         ? 'Informe o título do evento.'
                         : m == null || m < 1 || m > 12
-                            ? 'Mês inválido.'
-                            : y == null || y < 2000 || y > 2100
-                                ? 'Ano inválido.'
-                                : d == null || d < 1 || d > lastDay
-                                    ? 'Não existe dia $d em $m/$y.'
-                                    : null;
+                        ? 'Mês inválido.'
+                        : y == null || y < 2000 || y > 2100
+                        ? 'Ano inválido.'
+                        : d == null || d < 1 || d > lastDay
+                        ? 'Não existe dia $d em $m/$y.'
+                        : null;
                     if (msg != null) {
                       setDialogState(() => error = msg);
                       return;
@@ -464,8 +561,9 @@ class _BoletimTabState extends State<BoletimTab> {
       final m = int.parse(month.text.trim());
       final y = int.parse(year.text.trim());
       if (index == null) {
-        AppState.i.events.add(ChurchEvent(
-            ttl, d, m, y, time.text.trim(), note.text.trim()));
+        AppState.i.events.add(
+          ChurchEvent(ttl, d, m, y, time.text.trim(), note.text.trim()),
+        );
       } else {
         AppState.i.events[index]
           ..title = ttl

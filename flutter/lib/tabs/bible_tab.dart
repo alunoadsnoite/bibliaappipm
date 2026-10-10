@@ -199,7 +199,8 @@ TextSpan _highlightMatches(
 }
 
 class BibleTab extends StatefulWidget {
-  const BibleTab({super.key});
+  final String? initialKey;
+  const BibleTab({super.key, this.initialKey});
 
   @override
   State<BibleTab> createState() => _BibleTabState();
@@ -213,6 +214,7 @@ class _BibleTabState extends State<BibleTab> {
   int? _bookIndex;
   int? _chapter;
   int? _focusVerse;
+  bool _seekingVerse = false;
 
   /// Chave do versículo focado, usada para rolar até ele depois do build.
   final GlobalKey _focusKey = GlobalKey();
@@ -242,6 +244,24 @@ class _BibleTabState extends State<BibleTab> {
     // Leitura contínua: passa ao próximo capítulo ao chegar ao fim do texto,
     // tanto no modo normal quanto no modo leitura.
     _chapterScroll.addListener(_onChapterScroll);
+    final parts = widget.initialKey?.split(':');
+    if (parts != null && parts.length == 4) {
+      final book = int.tryParse(parts[1]);
+      final chapter = (int.tryParse(parts[2]) ?? 0) - 1;
+      final verse = (int.tryParse(parts[3]) ?? 0) - 1;
+      if (book != null &&
+          book >= 0 &&
+          book < AppState.i.bible.length &&
+          chapter >= 0 &&
+          chapter < AppState.i.bible[book].chapters.length &&
+          verse >= 0 &&
+          verse < AppState.i.bible[book].chapters[chapter].length) {
+        _bookIndex = book;
+        _chapter = chapter;
+        _focusVerse = verse;
+        _scrollToFocusVerse();
+      }
+    }
   }
 
   @override
@@ -378,7 +398,7 @@ class _BibleTabState extends State<BibleTab> {
     if (!_chapterScroll.hasClients) return;
     final pos = _chapterScroll.position;
     if (pos.maxScrollExtent <= 0) return;
-    if (pos.pixels <= 0 || pos.extentAfter > 100) return;
+    if (_seekingVerse || pos.pixels <= 0 || pos.extentAfter > 100) return;
     final next = _nextRef(book, ch);
     if (next == null) return;
     _goToRef(next.$1, next.$2);
@@ -412,17 +432,40 @@ class _BibleTabState extends State<BibleTab> {
   /// anterior fazia) só funcionava por acaso, porque os itens seguintes liam
   /// o valor novo no mesmo passe.
   void _scrollToFocusVerse() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _focusKey.currentContext;
-      if (ctx != null && ctx.mounted) {
-        Scrollable.ensureVisible(
-          ctx,
-          duration: const Duration(milliseconds: 400),
-          alignment: 0.15,
-          curve: Curves.easeInOut,
-        );
-      }
-    });
+    _seekingVerse = true;
+    final target = _focusVerse;
+    void seek() {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted || _focusVerse != target || !_chapterScroll.hasClients) {
+          _seekingVerse = false;
+          return;
+        }
+        final ctx = _focusKey.currentContext;
+        if (ctx != null && ctx.mounted) {
+          await Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 300),
+            alignment: 0.15,
+          );
+          _seekingVerse = false;
+        } else {
+          final pos = _chapterScroll.position;
+          if (pos.pixels >= pos.maxScrollExtent) {
+            _seekingVerse = false;
+            return;
+          }
+          _chapterScroll.jumpTo(
+            (pos.pixels + pos.viewportDimension * 0.7).clamp(
+              0,
+              pos.maxScrollExtent,
+            ),
+          );
+          seek();
+        }
+      });
+    }
+
+    seek();
   }
 
   // ------------------------------------------------ busca (texto e referência)
@@ -535,7 +578,6 @@ class _BibleTabState extends State<BibleTab> {
       _searchBookOnly = false;
     });
     _goToChapter(next.$2);
-    AppState.i.markChapterRead(next.$1, next.$2);
   }
 
   // --------------------------------------------------------------- interface
@@ -609,7 +651,6 @@ class _BibleTabState extends State<BibleTab> {
                         tooltip: 'Modo leitura',
                         onPressed: () {
                           setState(() => _focusMode = true);
-                          AppState.i.markChapterRead(_bookIndex!, _chapter!);
                         },
                       ),
                     if (_bookIndex != null && _results == null)
@@ -869,12 +910,14 @@ class _BibleTabState extends State<BibleTab> {
                   children: [
                     Icon(Icons.wb_sunny, color: Colors.white, size: 16),
                     SizedBox(width: 6),
-                    Text(
-                      'VERSÍCULO DO DIA',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        'VERSÍCULO DO DIA',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -912,7 +955,7 @@ class _BibleTabState extends State<BibleTab> {
     final t = appTheme;
     final total = state.totalChapters;
     final read = state.totalRead;
-    final daily = state.dailyGoal;
+    final daily = state.effectiveDailyGoal;
     final today = state.todayReadCount;
     final progress = total == 0 ? 0.0 : (read / total).clamp(0.0, 1.0);
     final pct = (progress * 100).toStringAsFixed(1);
@@ -937,15 +980,16 @@ class _BibleTabState extends State<BibleTab> {
                     size: 18,
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    'Plano de leitura',
-                    style: TextStyle(
-                      color: t.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      'Plano de leitura',
+                      style: TextStyle(
+                        color: t.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   Text(
                     'Hoje $today/$daily',
                     style: TextStyle(color: t.accent, fontSize: 12),
@@ -1079,9 +1123,10 @@ class _BibleTabState extends State<BibleTab> {
     final n = b.chapters.length;
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 6,
-        childAspectRatio: 1.4,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent:
+            80 * MediaQuery.textScalerOf(context).scale(16) / 16,
+        mainAxisExtent: 56 * MediaQuery.textScalerOf(context).scale(16) / 16,
         mainAxisSpacing: 8,
         crossAxisSpacing: 6,
       ),
@@ -1176,6 +1221,7 @@ class _BibleTabState extends State<BibleTab> {
           itemCount: verses.length,
           onPlay: _playChapter,
         ),
+        _completeChapterButton(),
         Expanded(
           child: GestureDetector(
             onHorizontalDragEnd: (details) {
@@ -1196,6 +1242,23 @@ class _BibleTabState extends State<BibleTab> {
       ],
     );
     return Stack(children: [view, if (_selMode) _selectionBar()]);
+  }
+
+  Widget _completeChapterButton() {
+    final read = AppState.i.isChapterRead(_bookIndex!, _chapter!);
+    return TextButton.icon(
+      icon: Icon(read ? Icons.check_circle : Icons.check_circle_outline),
+      label: Text(
+        read ? 'Capítulo concluído — desmarcar' : 'Concluí este capítulo',
+      ),
+      onPressed: () async {
+        if (read) {
+          await AppState.i.unmarkChapterRead(_bookIndex!, _chapter!);
+        } else {
+          await AppState.i.markChapterRead(_bookIndex!, _chapter!);
+        }
+      },
+    );
   }
 
   Widget _focusView() {
@@ -1222,7 +1285,12 @@ class _BibleTabState extends State<BibleTab> {
       },
       child: Stack(
         children: [
-          _verseList(verses, focusMode: true),
+          Column(
+            children: [
+              if (!_immersive) _completeChapterButton(),
+              Expanded(child: _verseList(verses, focusMode: true)),
+            ],
+          ),
           if (!_immersive && !_selMode)
             Positioned(
               right: 16,
@@ -1765,7 +1833,6 @@ class _BibleTabState extends State<BibleTab> {
         '${v == 0 ? intro : ''}Versículo ${v + 1}. ${verses[v]}',
     ];
     TtsService.i.playChapter(queue);
-    AppState.i.markChapterRead(_bookIndex!, chapter);
   }
 
   // -------------------------------------------------------------- resultados
@@ -1908,9 +1975,7 @@ class _BibleTabState extends State<BibleTab> {
       if (!mounted) return;
       setState(() => _loadingVersion = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível carregar a versão "$code".'),
-        ),
+        SnackBar(content: Text('Não foi possível carregar a versão "$code".')),
       );
       return;
     }

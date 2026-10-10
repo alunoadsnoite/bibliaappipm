@@ -56,6 +56,16 @@ void main() {
   testWidgets('tema Verde aplica a paleta verde e branco', (tester) async {
     await openConfig(tester);
 
+    await tester.scrollUntilVisible(
+      find.text('Verde'),
+      80,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).last,
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('Verde'), findsOneWidget);
 
     await tester.tap(find.text('Verde'));

@@ -7,6 +7,21 @@ void validateBackup(
   List<Book> bible,
   List<String> versions,
 ) {
+  if (data.containsKey('favorites')) {
+    for (final key in data['favorites'] as List) {
+      if (key is! String || key.isEmpty) {
+        throw const FormatException('Favoritos inválidos.');
+      }
+    }
+  }
+  final deadline = data['plan_deadline'];
+  if (deadline != null) {
+    final parsed = deadline is String ? DateTime.tryParse(deadline) : null;
+    if (parsed == null ||
+        parsed.toIso8601String().split('T').first != deadline) {
+      throw const FormatException('Prazo inválido.');
+    }
+  }
   // Valida todas as seções antes de tocar nos dados locais.
   for (final key in ['red_letter_enabled', 'plan_enabled']) {
     if (data.containsKey(key) && data[key] is! bool) {

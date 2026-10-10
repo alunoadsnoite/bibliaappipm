@@ -32,7 +32,7 @@ const String kAppName = 'Bíblia IPM';
 
 /// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
 /// pelo valor real do pacote via [PackageInfo].
-const String kAppVersion = '5.3.0';
+const String kAppVersion = '5.4.0';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -120,6 +120,7 @@ class AppState extends ChangeNotifier {
   double ttsPitch = 1.0;
   String ttsVoice = 'default'; // 'default' | 'female' | 'male'
 
+  Set<String> favorites = {};
   Map<String, String> notes = {};
   List<RecentRef> recent = [];
 
@@ -188,6 +189,7 @@ class AppState extends ChangeNotifier {
 
     await _optional('músicas', _loadSongs);
     await _optional('boletim', _loadBoletim);
+    favorites = (prefs.getStringList('favorites') ?? []).toSet();
     _optionalSync('notas', _loadNotes);
     _optionalSync('recentes', _loadRecent);
     _optionalSync('plano de leitura', _loadPlan);
@@ -785,6 +787,45 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void preferencesChanged() => notifyListeners();
+
+  bool isFavorite(String key) => favorites.contains(key);
+
+  Future<void> toggleFavorite(String key) async {
+    final next = {...favorites};
+    if (!next.add(key)) next.remove(key);
+    if (!await prefs.setStringList('favorites', next.toList()..sort())) {
+      throw StateError('Não foi possível salvar o favorito.');
+    }
+    favorites = next;
+    notifyListeners();
+  }
+
+  Map<String, int> get highlights => _allHighlights();
+
+  DateTime? get planDeadline =>
+      DateTime.tryParse(prefs.getString('plan_deadline') ?? '');
+
+  int goalForDate(DateTime now) {
+    final deadline = planDeadline;
+    if (deadline == null) return dailyGoal;
+    final remaining = (totalChapters - totalRead).clamp(0, totalChapters);
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final end = DateTime.utc(deadline.year, deadline.month, deadline.day);
+    final days = (end.difference(today).inDays + 1).clamp(1, 100000);
+    return (remaining / days).ceil();
+  }
+
+  int get effectiveDailyGoal => goalForDate(DateTime.now());
+
+  Future<void> setPlanDeadline(DateTime? date) async {
+    final ok = date == null
+        ? await prefs.remove('plan_deadline')
+        : await prefs.setString('plan_deadline', _dateKey(date));
+    if (!ok) throw StateError('Não foi possível salvar o prazo.');
+    notifyListeners();
+  }
+
   // ------------------------------------------------------------- plano
 
   bool get planEnabled => prefs.getBool('plan_enabled') ?? true;
@@ -936,6 +977,53 @@ class AppState extends ChangeNotifier {
 
   // ------------------------------------------------------------- boletim
 
+  String exportBoletim() => jsonEncode({
+    'boletim': 1,
+    'app': kAppName,
+    'aniversariantes': birthdays.map((b) => b.toJson()).toList(),
+    'eventos': events.map((e) => e.toJson()).toList(),
+  });
+
+  Future<void> importBoletim(String raw) async {
+    final data = jsonDecode(raw);
+    if (data is! Map<String, dynamic> ||
+        data['boletim'] != 1 ||
+        (data['aniversariantes'] is! List && data['eventos'] is! List)) {
+      throw const FormatException('Arquivo de boletim inválido.');
+    }
+    validateBackup(data, bible, kVersionOrder);
+    final mergedBirthdays = {
+      ...{
+        for (final b in birthdays)
+          '${b.name.trim().toLowerCase()}:${b.month}:${b.day}': b,
+      },
+    };
+    for (final raw in ((data['aniversariantes'] as List?) ?? [])) {
+      final b = Birthday.fromJson(raw as Map<String, dynamic>);
+      mergedBirthdays['${b.name.trim().toLowerCase()}:${b.month}:${b.day}'] = b;
+    }
+    final mergedEvents = {
+      ...{
+        for (final e in events)
+          '${e.title.trim().toLowerCase()}:${e.year}:${e.month}:${e.day}:${e.time}':
+              e,
+      },
+    };
+    for (final raw in ((data['eventos'] as List?) ?? [])) {
+      final e = ChurchEvent.fromJson(raw as Map<String, dynamic>);
+      mergedEvents['${e.title.trim().toLowerCase()}:${e.year}:${e.month}:${e.day}:${e.time}'] =
+          e;
+    }
+    final bs = mergedBirthdays.values.toList();
+    final es = mergedEvents.values.toList();
+    if (!await prefs.setString('boletim_json', parseBoletimJson(bs, es))) {
+      throw StateError('Não foi possível salvar o boletim.');
+    }
+    birthdays = bs;
+    events = es;
+    notifyListeners();
+  }
+
   Future<void> saveBoletim() async {
     await prefs.setString('boletim_json', parseBoletimJson(birthdays, events));
     notifyListeners();
@@ -997,6 +1085,8 @@ class AppState extends ChangeNotifier {
       'plan_daily_goal': dailyGoal,
       'highlights': _allHighlights(),
       'notes': notes,
+      'favorites': favorites.toList()..sort(),
+      'plan_deadline': planDeadline == null ? null : _dateKey(planDeadline!),
       'songs': parseSongsJson(songs),
       'aniversariantes': birthdays.map((b) => b.toJson()).toList(),
       'eventos': events.map((e) => e.toJson()).toList(),
@@ -1057,6 +1147,15 @@ class AppState extends ChangeNotifier {
   Future<void> _applyBackup(String raw) async {
     final data = jsonDecode(raw) as Map<String, dynamic>;
     final writes = <String, Object>{};
+    if (data['favorites'] is List) {
+      writes['favorites'] = {
+        ...favorites,
+        ...(data['favorites'] as List).cast<String>(),
+      }.toList()..sort();
+    }
+    if (data['plan_deadline'] is String) {
+      writes['plan_deadline'] = data['plan_deadline'] as String;
+    }
     for (final entry in ((data['highlights'] as Map?) ?? {}).entries) {
       writes['hl_${normalizeVKey(entry.key.toString())}'] = entry.value as int;
     }
@@ -1156,6 +1255,11 @@ class AppState extends ChangeNotifier {
       if (!await _writePreference(entry.key, entry.value)) {
         throw StateError('Não foi possível salvar ${entry.key}.');
       }
+    }
+    if (data.containsKey('plan_deadline') &&
+        data['plan_deadline'] == null &&
+        !await prefs.remove('plan_deadline')) {
+      throw StateError('Não foi possível restaurar o prazo.');
     }
     await load();
   }

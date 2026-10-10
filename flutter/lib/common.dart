@@ -28,10 +28,7 @@ const List<String> kHighlightNames = [
 /// ([AppState.displayedThemeIndex]), igual ao `MaterialApp`, para os widgets
 /// não ficarem com as cores do tema escolhido em vez do exibido.
 AppTheme get appTheme =>
-    themeForIndex(
-      AppState.i.displayedThemeIndex,
-      AppState.i.systemBrightness,
-    );
+    themeForIndex(AppState.i.displayedThemeIndex, AppState.i.systemBrightness);
 
 /// Remove diacríticos (acentos e cedilha) de uma string.
 String stripDiacritics(String s) {
@@ -88,132 +85,186 @@ Future<void> showLineMenu(
     ),
     builder: (ctx) {
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-              child: Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: t.text, fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ),
-            if (onSelect != null)
-              ListTile(
-                leading: Icon(Icons.checklist, color: t.text),
-                title: Text('Selecionar (copiar/nota/destaque em vários)',
-                    style: TextStyle(color: t.text)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onSelect();
-                },
-              ),
-            if (onCompare != null)
-              ListTile(
-                leading: Icon(Icons.compare_arrows, color: t.text),
-                title:
-                    Text('Comparar traduções', style: TextStyle(color: t.text)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onCompare();
-                },
-              ),
-            ListTile(
-              leading: Icon(Icons.volume_up, color: t.text),
-              title: Text('Ouvir', style: TextStyle(color: t.text)),
-              onTap: () {
-                TtsService.i.speakOne(speakText ?? text);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.note_add, color: t.text),
-              title: Text(note == null || note.isEmpty
-                  ? 'Anotar'
-                  : 'Nota: $note'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final edited = await _editNote(context, highlightKey, note ?? '');
-                if (edited != null) onNoteChanged?.call(edited);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.copy, color: t.text),
-              title: Text('Copiar', style: TextStyle(color: t.text)),
-              onTap: () {
-                copyText(text);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.share, color: t.text),
-              title: Text('Compartilhar', style: TextStyle(color: t.text)),
-              onTap: () {
-                shareText(text);
-                Navigator.pop(ctx);
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-              child: Text('Destaque',
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      color: t.muted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (var i = 0; i < kHighlightColors.length; i++)
-                    GestureDetector(
-                      onTap: () async {
-                        await AppState.i.setHighlight(highlightKey, i);
-                        onHighlightChanged?.call(i);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: kHighlightColors[i],
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: current == i ? t.primary : Colors.black12,
-                            width: current == i ? 3 : 1,
+                    color: t.text,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: Icon(
+                  AppState.i.isFavorite(highlightKey)
+                      ? Icons.star
+                      : Icons.star_border,
+                ),
+                title: Text(
+                  AppState.i.isFavorite(highlightKey)
+                      ? 'Remover dos favoritos'
+                      : 'Adicionar aos favoritos',
+                ),
+                onTap: () async {
+                  try {
+                    await AppState.i.toggleFavorite(highlightKey);
+                  } catch (_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Não foi possível salvar o favorito.'),
+                        ),
+                      );
+                    }
+                  }
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                  }
+                },
+              ),
+              if (onSelect != null)
+                ListTile(
+                  leading: Icon(Icons.checklist, color: t.text),
+                  title: Text(
+                    'Selecionar (copiar/nota/destaque em vários)',
+                    style: TextStyle(color: t.text),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onSelect();
+                  },
+                ),
+              if (onCompare != null)
+                ListTile(
+                  leading: Icon(Icons.compare_arrows, color: t.text),
+                  title: Text(
+                    'Comparar traduções',
+                    style: TextStyle(color: t.text),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onCompare();
+                  },
+                ),
+              ListTile(
+                leading: Icon(Icons.volume_up, color: t.text),
+                title: Text('Ouvir', style: TextStyle(color: t.text)),
+                onTap: () {
+                  TtsService.i.speakOne(speakText ?? text);
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.note_add, color: t.text),
+                title: Text(
+                  note == null || note.isEmpty ? 'Anotar' : 'Nota: $note',
+                ),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final edited = await _editNote(
+                    context,
+                    highlightKey,
+                    note ?? '',
+                  );
+                  if (edited != null) onNoteChanged?.call(edited);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.copy, color: t.text),
+                title: Text('Copiar', style: TextStyle(color: t.text)),
+                onTap: () {
+                  copyText(text);
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.share, color: t.text),
+                title: Text('Compartilhar', style: TextStyle(color: t.text)),
+                onTap: () {
+                  shareText(text);
+                  Navigator.pop(ctx);
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Text(
+                  'Destaque',
+                  style: TextStyle(
+                    color: t.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (var i = 0; i < kHighlightColors.length; i++)
+                      Semantics(
+                        button: true,
+                        label: kHighlightNames[i],
+                        selected: current == i,
+                        child: GestureDetector(
+                          onTap: () async {
+                            await AppState.i.setHighlight(highlightKey, i);
+                            onHighlightChanged?.call(i);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: kHighlightColors[i],
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: current == i
+                                    ? t.primary
+                                    : Colors.black12,
+                                width: current == i ? 3 : 1,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  if (clearOption)
-                    GestureDetector(
-                      onTap: () async {
-                        await AppState.i.setHighlight(highlightKey, -1);
-                        onHighlightChanged?.call(-1);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: t.light,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black12),
+                    if (clearOption)
+                      GestureDetector(
+                        onTap: () async {
+                          await AppState.i.setHighlight(highlightKey, -1);
+                          onHighlightChanged?.call(-1);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: t.light,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black12),
+                          ),
+                          child: Icon(
+                            Icons.format_color_reset,
+                            size: 20,
+                            color: t.muted,
+                          ),
                         ),
-                        child: Icon(Icons.format_color_reset,
-                            size: 20, color: t.muted),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     },
@@ -235,7 +286,10 @@ Future<String?> _editNote(
 
 /// Abre o diálogo de anotação (apenas) e devolve o texto digitado, ou `null`
 /// se cancelado. Não salva — quem chama decide onde gravar.
-Future<String?> editNoteDialog(BuildContext context, [String initial = '']) async {
+Future<String?> editNoteDialog(
+  BuildContext context, [
+  String initial = '',
+]) async {
   final t = appTheme;
   final ctrl = TextEditingController(text: initial);
   try {
@@ -268,4 +322,37 @@ Future<String?> editNoteDialog(BuildContext context, [String initial = '']) asyn
   } finally {
     ctrl.dispose();
   }
+}
+
+/// Rola progressivamente até uma linha ainda não construída pela lista.
+void scrollToTarget(
+  ScrollController controller,
+  GlobalKey target,
+  bool Function() isMounted,
+) {
+  void seek() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!isMounted() || !controller.hasClients) return;
+      final context = target.currentContext;
+      if (context != null && context.mounted) {
+        Scrollable.ensureVisible(
+          context,
+          alignment: 0.15,
+          duration: const Duration(milliseconds: 250),
+        );
+        return;
+      }
+      final position = controller.position;
+      if (position.pixels >= position.maxScrollExtent) return;
+      controller.jumpTo(
+        (position.pixels + position.viewportDimension * 0.7).clamp(
+          0,
+          position.maxScrollExtent,
+        ),
+      );
+      seek();
+    });
+  }
+
+  seek();
 }

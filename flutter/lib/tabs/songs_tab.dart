@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../common.dart';
 import '../models.dart';
+import '../personal_tools.dart';
 import '../store.dart';
 import '../tts.dart';
 import '../tts_bar.dart';
 
 class SongsTab extends StatefulWidget {
-  const SongsTab({super.key});
+  final String? initialKey;
+  const SongsTab({super.key, this.initialKey});
 
   @override
   State<SongsTab> createState() => _SongsTabState();
@@ -20,10 +22,30 @@ class _SongsTabState extends State<SongsTab> {
   String _query = '';
   Song? _current;
   Timer? _debounce;
+  final _detailScroll = ScrollController();
+  final _initialFocus = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = widget.initialKey?.split(':');
+    if (parts != null && parts.length >= 2) {
+      for (final item in AppState.i.songs) {
+        if (item.id == parts[1]) {
+          _current = item;
+          break;
+        }
+      }
+    }
+    if (parts != null && parts.length > 2) {
+      scrollToTarget(_detailScroll, _initialFocus, () => mounted);
+    }
+  }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _detailScroll.dispose();
     _search.dispose();
     super.dispose();
   }
@@ -32,14 +54,15 @@ class _SongsTabState extends State<SongsTab> {
   /// filtradas pela busca.
   List<Song> get _filtered {
     final songs = List.of(AppState.i.songs)
-      ..sort((a, b) =>
-          foldSortKey(a.title).compareTo(foldSortKey(b.title)));
+      ..sort((a, b) => foldSortKey(a.title).compareTo(foldSortKey(b.title)));
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return songs;
     return songs
-        .where((s) =>
-            s.title.toLowerCase().contains(q) ||
-            s.lyrics.toLowerCase().contains(q))
+        .where(
+          (s) =>
+              s.title.toLowerCase().contains(q) ||
+              s.lyrics.toLowerCase().contains(q),
+        )
         .toList();
   }
 
@@ -58,8 +81,11 @@ class _SongsTabState extends State<SongsTab> {
                 children: [
                   if (_current != null)
                     IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new,
-                          size: 20, color: t.primary),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 20,
+                        color: t.primary,
+                      ),
                       onPressed: () {
                         TtsService.i.stop();
                         setState(() => _current = null);
@@ -67,16 +93,17 @@ class _SongsTabState extends State<SongsTab> {
                     ),
                   Expanded(
                     child: Text(
-                      _current == null
-                          ? 'Músicas'
-                          : _current!.title,
+                      _current == null ? 'Músicas' : _current!.title,
                       style: TextStyle(
-                          color: t.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
+                        color: t.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (_current != null)
+                    FavoriteButton(contentKey: 's:${_current!.id}'),
                   if (_current == null)
                     SizedBox(
                       width: 140,
@@ -86,8 +113,10 @@ class _SongsTabState extends State<SongsTab> {
                           // Debounce: filtra (título+letra, em toda a lista)
                           // só depois da pausa na digitação.
                           _debounce?.cancel();
-                          _debounce = Timer(const Duration(milliseconds: 250),
-                              () => setState(() => _query = v));
+                          _debounce = Timer(
+                            const Duration(milliseconds: 250),
+                            () => setState(() => _query = v),
+                          );
                         },
                         style: TextStyle(color: t.text, fontSize: 14),
                         decoration: InputDecoration(
@@ -97,7 +126,9 @@ class _SongsTabState extends State<SongsTab> {
                           filled: true,
                           fillColor: t.light,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -108,21 +139,22 @@ class _SongsTabState extends State<SongsTab> {
                   TextButton.icon(
                     onPressed: () => _edit(_current),
                     icon: Icon(
-                        _current == null ? Icons.add : Icons.edit,
-                        size: 18,
-                        color: t.accent),
+                      _current == null ? Icons.add : Icons.edit,
+                      size: 18,
+                      color: t.accent,
+                    ),
                     label: Text(
                       _current == null ? 'Adicionar' : 'Editar',
                       style: TextStyle(
-                          color: t.accent, fontWeight: FontWeight.bold),
+                        color: t.accent,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: _current == null ? _list() : _detail(_current!),
-            ),
+            Expanded(child: _current == null ? _list() : _detail(_current!)),
           ],
         ),
       ),
@@ -164,13 +196,18 @@ class _SongsTabState extends State<SongsTab> {
           child: ListTile(
             onTap: () => setState(() => _current = s),
             onLongPress: () => _itemMenu(s),
-            title: Text(s.title,
-                style: TextStyle(
-                    color: t.text,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
-            subtitle: Text(preview,
-                style: TextStyle(color: t.muted, fontSize: 13)),
+            title: Text(
+              s.title,
+              style: TextStyle(
+                color: t.text,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              preview,
+              style: TextStyle(color: t.muted, fontSize: 13),
+            ),
           ),
         );
       },
@@ -182,6 +219,7 @@ class _SongsTabState extends State<SongsTab> {
     final lines = s.lyrics.split('\n');
     final stanzas = _songStanzas(s.lyrics);
     return ListView(
+      controller: _detailScroll,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         TtsBar(
@@ -195,17 +233,17 @@ class _SongsTabState extends State<SongsTab> {
           s.title,
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: t.text, fontSize: 22, fontWeight: FontWeight.bold),
+            color: t.text,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 10),
         for (var li = 0; li < lines.length; li++)
           if (lines[li].trim().isEmpty)
             const SizedBox(height: 8)
           else
-            _line(
-              text: lines[li],
-              key: 's:${AppState.songId(s)}:$li',
-            ),
+            _line(text: lines[li], key: 's:${AppState.songId(s)}:$li'),
       ],
     );
   }
@@ -240,6 +278,7 @@ class _SongsTabState extends State<SongsTab> {
   Widget _line({required String text, required String key}) {
     final t = appTheme;
     return GestureDetector(
+      key: key == widget.initialKey ? _initialFocus : null,
       onLongPress: () => showLineMenu(
         context,
         title: text,
@@ -279,8 +318,10 @@ class _SongsTabState extends State<SongsTab> {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: t.card,
-          title: Text(song == null ? 'Nova música' : 'Editar música',
-              style: TextStyle(color: t.text)),
+          title: Text(
+            song == null ? 'Nova música' : 'Editar música',
+            style: TextStyle(color: t.text),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -288,8 +329,9 @@ class _SongsTabState extends State<SongsTab> {
                 TextField(
                   controller: titleCtrl,
                   style: TextStyle(color: t.text),
-                  decoration:
-                      const InputDecoration(hintText: 'Título da música'),
+                  decoration: const InputDecoration(
+                    hintText: 'Título da música',
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -297,7 +339,8 @@ class _SongsTabState extends State<SongsTab> {
                   maxLines: 10,
                   style: TextStyle(color: t.text),
                   decoration: const InputDecoration(
-                      hintText: 'Letra (uma frase por linha)'),
+                    hintText: 'Letra (uma frase por linha)',
+                  ),
                 ),
               ],
             ),

@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../common.dart';
+import '../data_files.dart';
+import '../reminder_settings.dart';
 import '../store.dart';
 import '../theme.dart';
 
@@ -153,6 +152,8 @@ class SettingsTab extends StatelessWidget {
             const SizedBox(height: 20),
             _planSection(context),
             const SizedBox(height: 20),
+            const ReminderSettings(),
+            const SizedBox(height: 20),
             _backupSection(context),
             const SizedBox(height: 20),
             _voiceSection(context),
@@ -266,8 +267,10 @@ class SettingsTab extends StatelessWidget {
                   style: TextStyle(color: t.muted, fontSize: 12),
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     TextButton.icon(
                       onPressed: () async {
@@ -455,8 +458,10 @@ class SettingsTab extends StatelessWidget {
                 style: TextStyle(color: t.text, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   TextButton.icon(
                     onPressed: _openInstagram,
@@ -515,26 +520,22 @@ class SettingsTab extends StatelessWidget {
               children: [
                 Text('Voz', style: TextStyle(color: t.muted, fontSize: 13)),
                 const SizedBox(height: 8),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'default',
-                      label: Text('Padrão'),
-                      icon: Icon(Icons.record_voice_over, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: 'female',
-                      label: Text('Feminina'),
-                      icon: Icon(Icons.female, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: 'male',
-                      label: Text('Masculina'),
-                      icon: Icon(Icons.male, size: 18),
-                    ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final voice in [
+                      ('default', 'Padrão', Icons.record_voice_over),
+                      ('female', 'Feminina', Icons.female),
+                      ('male', 'Masculina', Icons.male),
+                    ])
+                      ChoiceChip(
+                        label: Text(voice.$2),
+                        avatar: Icon(voice.$3, size: 18),
+                        selected: state.ttsVoice == voice.$1,
+                        onSelected: (_) => state.setTtsVoice(voice.$1),
+                      ),
                   ],
-                  selected: {state.ttsVoice},
-                  onSelectionChanged: (s) => state.setTtsVoice(s.first),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -688,7 +689,7 @@ class SettingsTab extends StatelessWidget {
                 value: enabled,
                 activeTrackColor: t.accent,
                 title: Text(
-                  'Plano anual',
+                  'Acompanhar leitura',
                   style: TextStyle(color: t.text, fontSize: 15),
                 ),
                 subtitle: Text(
@@ -698,6 +699,36 @@ class SettingsTab extends StatelessWidget {
                 onChanged: (v) => state.setPlanEnabled(v),
               ),
               if (enabled)
+                ListTile(
+                  title: const Text('Prazo para concluir'),
+                  subtitle: Text(
+                    state.planDeadline == null
+                        ? 'Sem prazo — meta manual'
+                        : '${state.planDeadline!.day}/${state.planDeadline!.month}/${state.planDeadline!.year} · ${state.effectiveDailyGoal} capítulos por dia',
+                  ),
+                  trailing: state.planDeadline == null
+                      ? const Icon(Icons.event)
+                      : IconButton(
+                          tooltip: 'Remover prazo',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => state.setPlanDeadline(null),
+                        ),
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final today = DateTime(now.year, now.month, now.day);
+                    final current = state.planDeadline;
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: current != null && !current.isBefore(today)
+                          ? current
+                          : today.add(const Duration(days: 365)),
+                      firstDate: today,
+                      lastDate: DateTime(now.year + 10, 12, 31),
+                    );
+                    if (date != null) await state.setPlanDeadline(date);
+                  },
+                ),
+              if (enabled && state.planDeadline == null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
                   child: Column(
@@ -783,22 +814,8 @@ class SettingsTab extends StatelessWidget {
   Future<void> _exportData(BuildContext context) async {
     final t = appTheme;
     final json = AppState.i.buildExportJson();
-    final file = XFile.fromData(
-      Uint8List.fromList(utf8.encode(json)),
-      mimeType: 'application/json',
-      name: 'biblia-ipm-backup.json',
-    );
     try {
-      final box = context.findRenderObject() as RenderBox?;
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [file],
-          fileNameOverrides: ['biblia-ipm-backup.json'],
-          sharePositionOrigin: box == null
-              ? null
-              : box.localToGlobal(Offset.zero) & box.size,
-        ),
-      );
+      await shareJsonFile(context, json, 'biblia-ipm-backup.json');
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -835,18 +852,8 @@ class SettingsTab extends StatelessWidget {
                 label: const Text('Escolher arquivo JSON'),
                 onPressed: () async {
                   try {
-                    final file = await openFile(
-                      acceptedTypeGroups: [
-                        const XTypeGroup(
-                          label: 'Backup JSON',
-                          extensions: ['json'],
-                          mimeTypes: ['application/json'],
-                          uniformTypeIdentifiers: ['public.json'],
-                        ),
-                      ],
-                    );
-                    if (file == null) return;
-                    final text = await file.readAsString();
+                    final text = await openJsonFile();
+                    if (text == null) return;
                     if (!ctx.mounted) return;
                     ctrl.text = text;
                   } catch (_) {

@@ -1,0 +1,7 @@
+Bíblia IPM is a Portuguese Bible reader with a hymnal, songs, documents and church bulletin.
+
+Read offline, compare translations, save favorites, notes and highlights, and search across the available content.
+
+Set a daily reading goal or a completion date, explicitly mark finished chapters and enable an optional local reminder.
+
+Share and import JSON backups and separate church bulletins. Text-to-speech uses the device engine; offline voices must be installed in the operating system.

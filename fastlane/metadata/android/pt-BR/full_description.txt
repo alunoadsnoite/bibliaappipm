@@ -1,0 +1,7 @@
+Bíblia IPM reúne leitura bíblica, hinário, músicas, documentos e boletim da igreja.
+
+Leia offline, compare traduções, salve favoritos, notas e destaques. A busca unificada encontra textos na Bíblia, no hinário, nas músicas, na biblioteca e nas notas.
+
+Defina uma meta diária ou uma data para terminar a leitura. Marque os capítulos concluídos manualmente e ative um lembrete local opcional.
+
+Compartilhe e importe backups em JSON e boletins separados. A leitura por voz usa o mecanismo disponível no aparelho; vozes offline dependem de instalação no sistema.

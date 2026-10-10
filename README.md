@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **5.3.0**
+> Nome do projeto: **BibliaApp** · versão atual: **5.4.0**
 
 ## Funcionalidades
 
@@ -22,9 +22,10 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
   paginados com contagem, com opção de **limitar a busca ao livro aberto**.
 - **Versículo do dia**: rotação determinística por data, 100% offline.
 - **Widget Android**: versículo do dia na tela inicial, atualização diária automática.
-- **Plano de leitura anual**: progresso de capítulos lidos, meta diária
-  configurável, contagem por dia, **sequência de dias** e botão **Próximo
-  capítulo** para continuar de onde parou.
+- **Plano de leitura**: meta manual ou data de conclusão com cálculo automático
+  dos capítulos restantes por dia, contagem diária, sequência e próximo capítulo.
+- **Concluí este capítulo**: o progresso só muda por ação explícita; abrir,
+  deslizar ou ouvir um capítulo não o marca automaticamente.
 - **Capítulos lidos** marcados na grade de capítulos (toque longo desmarca).
 - **Modo leitura (foco)**: leitura em tela cheia, sem barras de navegação,
   com **deslizar para a esquerda/direita** e passar de capítulo.
@@ -34,6 +35,10 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Letras vermelhas**: destaca em vermelho as **falas de Jesus e de Deus**
   em toda a Bíblia (recurso opcional nas Configurações).
 - **Comparar traduções** de um mesmo versículo, lado a lado.
+- **Central de notas e destaques**: filtro por livro, categoria e cor, com acesso à leitura.
+- **Favoritos**: versículos, hinos, músicas e documentos, preservados no backup.
+- **Busca unificada**: Bíblia, hinário, músicas, biblioteca e notas, com filtros
+  por categoria, busca sem acentos, referências e resultados paginados.
 - **Copiar** e **compartilhar** versículos com referência.
 - **Leitura por voz (acessibilidade)** — leia o capítulo inteiro com
   play/pausa/parar, ou um único versículo pelo menu de toque longo, com
@@ -66,6 +71,8 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Aniversariantes do dia**, exibidos automaticamente.
 - **Próximos eventos** da igreja com data, hora e observações (eventos passados somem).
 - Cadastro e edição integrados ao calendário.
+- Compartilhar e importar arquivo JSON do boletim separadamente; a importação
+  adiciona eventos e aniversariantes sem duplicar itens iguais ou alterar os outros dados.
 
 ### ⚙️ Configurações
 - Tamanho da letra: **Pequeno**, **Normal**, **Grande** e **Extra grande**
@@ -75,6 +82,11 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Leitura por voz**: escolher a **voz** (padrão/feminina/masculina), a
   **velocidade** e o **tom** da leitura.
 - **Sobre o app**: logomarca, versão e links (Instagram, YouTube e e-mail).
+- **Lembrete diário**: notificação local opcional em Android/iOS, com horário
+  escolhido pelo usuário. A permissão é solicitada ao ativar; o sistema pode
+  atrasar a entrega por economia de bateria. A ativação é específica do aparelho.
+- Navegação compacta em celulares e com texto ampliado: Bíblia, Hinário e
+  **Mais**, que abre Músicas, Biblioteca, Boletim e Configurações.
 - **Backup**: compartilhar um arquivo JSON e importar pelo seletor de arquivos
   ou colando o conteúdo. Validação antes da restauração e cópia local dos dados
   anteriores; notas, destaques e progresso são mesclados.
@@ -95,6 +107,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - `share_plus` — compartilhamento de texto e arquivos de backup
 - `file_selector` — importação de arquivos JSON
 - `flutter_tts` — leitura por voz (acessibilidade)
+- `flutter_local_notifications`, `flutter_timezone`, `timezone` — lembretes locais
 - `url_launcher` — contatos (e-mail e WhatsApp)
 - Código 100% offline — todos os conteúdos são empacotados como assets do app
 
@@ -136,6 +149,17 @@ flutter run
 flutter build apk --release
 ```
 
+A compilação de produção requer `flutter/android/key.properties` com os
+campos `storePassword`, `keyPassword`, `keyAlias` e `storeFile`, apontando para
+a chave de assinatura local. A chave e esse arquivo são ignorados pelo Git.
+Guarde ambos em um backup privado para assinar futuras atualizações.
+
+### F-Droid
+
+As descrições, ícone e changelog estão em `fastlane/metadata/android/`.
+O estado da preparação e as pendências para o catálogo oficial estão em
+[docs/FDROID.md](docs/FDROID.md).
+
 ### Testes
 
 ```bash
@@ -155,6 +179,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 
 | Versão | Descrição |
 | ------ | --------- |
+| 5.4.0 | Central de notas e destaques, favoritos, busca unificada, plano com prazo, conclusão explícita de capítulos, boletim compartilhável, navegação adaptativa e lembretes locais opcionais |
 | 4.0 | App nativo Android |
 | 4.2 | Rewrite em Flutter (Android + iOS) com a marca **Bíblia IPM** |
 | 4.2.1 | Novo ícone, correções na atualização de tema e tamanho da letra |

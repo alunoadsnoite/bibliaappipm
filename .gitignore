@@ -19,8 +19,8 @@ local.properties
 android/IML.toml
 
 # Keystore files
-#*.jks
-#*.keystore
+*.jks
+*.keystore
 # Flutter signing config (contém credenciais reais se presente)
 key.properties
 

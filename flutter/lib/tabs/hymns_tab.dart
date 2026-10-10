@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../common.dart';
 import '../models.dart';
+import '../personal_tools.dart';
 import '../store.dart';
 import '../tts.dart';
 import '../tts_bar.dart';
 
 class HymnsTab extends StatefulWidget {
-  const HymnsTab({super.key});
+  final String? initialKey;
+  const HymnsTab({super.key, this.initialKey});
 
   @override
   State<HymnsTab> createState() => _HymnsTabState();
@@ -20,10 +22,30 @@ class _HymnsTabState extends State<HymnsTab> {
   String _query = '';
   Hymn? _current;
   Timer? _debounce;
+  final _detailScroll = ScrollController();
+  final _initialFocus = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = widget.initialKey?.split(':');
+    if (parts != null && parts.length >= 2) {
+      for (final item in AppState.i.hymns) {
+        if (item.num.toString() == parts[1]) {
+          _current = item;
+          break;
+        }
+      }
+    }
+    if (parts != null && parts.length > 2) {
+      scrollToTarget(_detailScroll, _initialFocus, () => mounted);
+    }
+  }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _detailScroll.dispose();
     _search.dispose();
     super.dispose();
   }
@@ -67,8 +89,11 @@ class _HymnsTabState extends State<HymnsTab> {
                 children: [
                   if (_current != null)
                     IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new,
-                          size: 20, color: t.primary),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 20,
+                        color: t.primary,
+                      ),
                       onPressed: () {
                         TtsService.i.stop();
                         setState(() => _current = null);
@@ -80,12 +105,15 @@ class _HymnsTabState extends State<HymnsTab> {
                           ? 'Hinário Novo Cântico'
                           : '${_current!.num} - ${_current!.title}',
                       style: TextStyle(
-                          color: t.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
+                        color: t.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (_current != null)
+                    FavoriteButton(contentKey: 'h:${_current!.num}'),
                   if (_current == null)
                     SizedBox(
                       width: 140,
@@ -95,8 +123,10 @@ class _HymnsTabState extends State<HymnsTab> {
                           // Debounce: o filtro percorre a letra de todos os
                           // hinos, então só roda depois da pausa na digitação.
                           _debounce?.cancel();
-                          _debounce = Timer(const Duration(milliseconds: 250),
-                              () => setState(() => _query = v));
+                          _debounce = Timer(
+                            const Duration(milliseconds: 250),
+                            () => setState(() => _query = v),
+                          );
                         },
                         style: TextStyle(color: t.text, fontSize: 14),
                         decoration: InputDecoration(
@@ -106,7 +136,9 @@ class _HymnsTabState extends State<HymnsTab> {
                           filled: true,
                           fillColor: t.light,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -117,9 +149,7 @@ class _HymnsTabState extends State<HymnsTab> {
                 ],
               ),
             ),
-            Expanded(
-              child: _current == null ? _list() : _detail(_current!),
-            ),
+            Expanded(child: _current == null ? _list() : _detail(_current!)),
           ],
         ),
       ),
@@ -131,8 +161,10 @@ class _HymnsTabState extends State<HymnsTab> {
     final items = _filtered;
     if (items.isEmpty) {
       return Center(
-        child: Text('Nenhum hino encontrado.',
-            style: TextStyle(color: t.muted, fontSize: 15)),
+        child: Text(
+          'Nenhum hino encontrado.',
+          style: TextStyle(color: t.muted, fontSize: 15),
+        ),
       );
     }
     return ListView.builder(
@@ -146,13 +178,18 @@ class _HymnsTabState extends State<HymnsTab> {
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: ListTile(
             onTap: () => setState(() => _current = h),
-            title: Text('${h.num}',
-                style: TextStyle(
-                    color: t.accent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold)),
-            subtitle: Text(h.title,
-                style: TextStyle(color: t.text, fontSize: 16)),
+            title: Text(
+              '${h.num}',
+              style: TextStyle(
+                color: t.accent,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              h.title,
+              style: TextStyle(color: t.text, fontSize: 16),
+            ),
           ),
         );
       },
@@ -162,6 +199,7 @@ class _HymnsTabState extends State<HymnsTab> {
   Widget _detail(Hymn h) {
     final t = appTheme;
     return ListView(
+      controller: _detailScroll,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         TtsBar(
@@ -175,33 +213,38 @@ class _HymnsTabState extends State<HymnsTab> {
           h.title,
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: t.text, fontSize: 22, fontWeight: FontWeight.bold),
+            color: t.text,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         if (h.author.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text(h.author,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: t.muted, fontSize: 13)),
+          Text(
+            h.author,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: t.muted, fontSize: 13),
+          ),
         ],
         const SizedBox(height: 12),
         for (var s = 0; s < h.stanzas.length; s++) ...[
           if (_stanzaLabel(h.stanzaNames[s]).isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 14, bottom: 2),
-              child: Text(_stanzaLabel(h.stanzaNames[s]),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: t.accent,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold)),
+              child: Text(
+                _stanzaLabel(h.stanzaNames[s]),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: t.accent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           else
             const SizedBox(height: 10),
           for (var l = 0; l < h.stanzas[s].length; l++)
-            _line(
-              text: h.stanzas[s][l],
-              key: 'h:${h.num}:$s:$l',
-            ),
+            _line(text: h.stanzas[s][l], key: 'h:${h.num}:$s:$l'),
         ],
       ],
     );
@@ -222,6 +265,7 @@ class _HymnsTabState extends State<HymnsTab> {
   Widget _line({required String text, required String key}) {
     final t = appTheme;
     return GestureDetector(
+      key: key == widget.initialKey ? _initialFocus : null,
       onLongPress: () => showLineMenu(
         context,
         title: text,

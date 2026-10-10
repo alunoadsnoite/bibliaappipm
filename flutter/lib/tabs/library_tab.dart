@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../common.dart';
 import '../models.dart';
+import '../personal_tools.dart';
 import '../store.dart';
 import '../tts.dart';
 import '../tts_bar.dart';
 
 class LibraryTab extends StatefulWidget {
-  const LibraryTab({super.key});
+  final String? initialKey;
+  const LibraryTab({super.key, this.initialKey});
 
   @override
   State<LibraryTab> createState() => _LibraryTabState();
@@ -22,10 +24,30 @@ class _LibraryTabState extends State<LibraryTab> {
   String _docQuery = '';
   BibliotecaText? _current;
   Timer? _debounce;
+  final _detailScroll = ScrollController();
+  final _initialFocus = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = widget.initialKey?.split(':');
+    if (parts != null && parts.length >= 2) {
+      for (final item in AppState.i.biblioteca) {
+        if (item.id == parts[1]) {
+          _current = item;
+          break;
+        }
+      }
+    }
+    if (parts != null && parts.length > 2) {
+      scrollToTarget(_detailScroll, _initialFocus, () => mounted);
+    }
+  }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _detailScroll.dispose();
     _search.dispose();
     _docSearch.dispose();
     super.dispose();
@@ -62,8 +84,11 @@ class _LibraryTabState extends State<LibraryTab> {
                 children: [
                   if (_current != null)
                     IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new,
-                          size: 20, color: t.primary),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 20,
+                        color: t.primary,
+                      ),
                       onPressed: () {
                         TtsService.i.stop();
                         _docSearch.clear();
@@ -77,12 +102,15 @@ class _LibraryTabState extends State<LibraryTab> {
                     child: Text(
                       _current == null ? 'Biblioteca' : _current!.title,
                       style: TextStyle(
-                          color: t.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
+                        color: t.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (_current != null)
+                    FavoriteButton(contentKey: 'b:${_current!.id}'),
                   if (_current == null)
                     SizedBox(
                       width: 140,
@@ -90,8 +118,10 @@ class _LibraryTabState extends State<LibraryTab> {
                         controller: _search,
                         onChanged: (v) {
                           _debounce?.cancel();
-                          _debounce = Timer(const Duration(milliseconds: 250),
-                              () => setState(() => _query = v));
+                          _debounce = Timer(
+                            const Duration(milliseconds: 250),
+                            () => setState(() => _query = v),
+                          );
                         },
                         style: TextStyle(color: t.text, fontSize: 14),
                         decoration: InputDecoration(
@@ -101,7 +131,9 @@ class _LibraryTabState extends State<LibraryTab> {
                           filled: true,
                           fillColor: t.light,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -112,9 +144,7 @@ class _LibraryTabState extends State<LibraryTab> {
                 ],
               ),
             ),
-            Expanded(
-              child: _current == null ? _list() : _detail(_current!),
-            ),
+            Expanded(child: _current == null ? _list() : _detail(_current!)),
           ],
         ),
       ),
@@ -126,8 +156,10 @@ class _LibraryTabState extends State<LibraryTab> {
     final docs = _filtered;
     if (docs.isEmpty) {
       return Center(
-        child: Text('Nenhum documento encontrado.',
-            style: TextStyle(color: t.muted, fontSize: 15)),
+        child: Text(
+          'Nenhum documento encontrado.',
+          style: TextStyle(color: t.muted, fontSize: 15),
+        ),
       );
     }
     return ListView.builder(
@@ -152,17 +184,22 @@ class _LibraryTabState extends State<LibraryTab> {
                 _docQuery = '';
               });
             },
-            title: Text(d.title,
-                style: TextStyle(
-                    color: t.text,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
+            title: Text(
+              d.title,
+              style: TextStyle(
+                color: t.text,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             subtitle: Text(
               d.sub,
               style: TextStyle(color: t.muted, fontSize: 13),
             ),
-            trailing: Text(label,
-                style: TextStyle(color: t.muted, fontSize: 12)),
+            trailing: Text(
+              label,
+              style: TextStyle(color: t.muted, fontSize: 12),
+            ),
           ),
         );
       },
@@ -176,6 +213,7 @@ class _LibraryTabState extends State<LibraryTab> {
         ? d.items.length
         : d.items.where((it) => _docItemMatches(it, q)).length;
     return ListView(
+      controller: _detailScroll,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         TtsBar(
@@ -189,8 +227,10 @@ class _LibraryTabState extends State<LibraryTab> {
           controller: _docSearch,
           onChanged: (v) {
             _debounce?.cancel();
-            _debounce = Timer(const Duration(milliseconds: 250),
-                () => setState(() => _docQuery = v));
+            _debounce = Timer(
+              const Duration(milliseconds: 250),
+              () => setState(() => _docQuery = v),
+            );
           },
           style: TextStyle(color: t.text, fontSize: 14),
           decoration: InputDecoration(
@@ -210,7 +250,9 @@ class _LibraryTabState extends State<LibraryTab> {
                     },
                   ),
             contentPadding: const EdgeInsets.symmetric(
-                horizontal: 10, vertical: 10),
+              horizontal: 10,
+              vertical: 10,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -232,41 +274,48 @@ class _LibraryTabState extends State<LibraryTab> {
           d.title,
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: t.text, fontSize: 22, fontWeight: FontWeight.bold),
+            color: t.text,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         if (d.sub.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text(d.sub,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: t.muted, fontSize: 13)),
+          Text(
+            d.sub,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: t.muted, fontSize: 13),
+          ),
         ],
         const SizedBox(height: 12),
         if (q.isNotEmpty && matching == 0)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Text('Nenhum item encontrado para "${_docQuery.trim()}"',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.muted, fontSize: 14)),
+            child: Text(
+              'Nenhum item encontrado para "${_docQuery.trim()}"',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: t.muted, fontSize: 14),
+            ),
           ),
         for (var i = 0; i < d.items.length; i++) ...[
           if (_docItemMatches(d.items[i], q)) ...[
             if (d.items[i].t.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 14, bottom: 2),
-                child: Text(d.items[i].t,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: t.accent,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold)),
+                child: Text(
+                  d.items[i].t,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: t.accent,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               )
             else
               const SizedBox(height: 14),
             for (var j = 0; j < d.items[i].p.length; j++)
-              _line(
-                text: d.items[i].p[j],
-                key: 'b:${d.id}:$i:$j',
-              ),
+              _line(text: d.items[i].p[j], key: 'b:${d.id}:$i:$j'),
           ],
         ],
       ],
@@ -292,6 +341,7 @@ class _LibraryTabState extends State<LibraryTab> {
   Widget _line({required String text, required String key}) {
     final t = appTheme;
     return GestureDetector(
+      key: key == widget.initialKey ? _initialFocus : null,
       onLongPress: () => showLineMenu(
         context,
         title: text,
