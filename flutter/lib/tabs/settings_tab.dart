@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../common.dart';
@@ -41,22 +44,36 @@ class SettingsTab extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
-            Text('Configurações',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: t.text, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              'Configurações',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: t.text,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text('$kAppName - versão ${state.appVersion}',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.muted, fontSize: 13)),
+            Text(
+              '$kAppName - versão ${state.appVersion}',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: t.muted, fontSize: 13),
+            ),
             const SizedBox(height: 20),
-            Text('Tamanho da letra',
-                style: TextStyle(
-                    color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+            Text(
+              'Tamanho da letra',
+              style: TextStyle(
+                color: t.text,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(kFontLevelNames[level],
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.accent, fontSize: 14)),
+            Text(
+              kFontLevelNames[level],
+              textAlign: TextAlign.center,
+              style: TextStyle(color: t.accent, fontSize: 14),
+            ),
             Slider(
               value: level.toDouble(),
               min: 0,
@@ -64,8 +81,7 @@ class SettingsTab extends StatelessWidget {
               divisions: kFontLevels.length - 1,
               activeColor: t.accent,
               label: kFontLevelNames[level],
-              onChanged: (v) =>
-                  state.setFontScale(kFontLevels[v.round()]),
+              onChanged: (v) => state.setFontScale(kFontLevels[v.round()]),
             ),
             Row(
               children: [
@@ -105,9 +121,14 @@ class SettingsTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Aparência',
-                style: TextStyle(
-                    color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+            Text(
+              'Aparência',
+              style: TextStyle(
+                color: t.text,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             for (var i = 0; i < kThemeNames.length; i++) _themeRow(context, i),
             const SizedBox(height: 8),
@@ -170,9 +191,14 @@ class SettingsTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Dízimos e ofertas',
-            style: TextStyle(
-                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          'Dízimos e ofertas',
+          style: TextStyle(
+            color: t.text,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Material(
           color: t.card,
@@ -191,15 +217,22 @@ class SettingsTab extends StatelessWidget {
                         color: const Color(0xFF00A550),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.qr_code_2,
-                          color: Colors.white, size: 22),
+                      child: const Icon(
+                        Icons.qr_code_2,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Contribua pela chave Pix (CNPJ), com sua oferta e '
                         'dízimo, e ajude a obra do Senhor.',
-                        style: TextStyle(color: t.muted, fontSize: 13, height: 1.4),
+                        style: TextStyle(
+                          color: t.muted,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ],
@@ -208,7 +241,9 @@ class SettingsTab extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: t.light,
                     borderRadius: BorderRadius.circular(8),
@@ -217,10 +252,11 @@ class SettingsTab extends StatelessWidget {
                     kPixKey,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: t.text,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5),
+                      color: t.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -236,11 +272,15 @@ class SettingsTab extends StatelessWidget {
                     TextButton.icon(
                       onPressed: () async {
                         await copyText(kPixKey);
-                        messenger.showSnackBar(SnackBar(
-                          content: Text('Chave Pix copiada.',
-                              style: TextStyle(color: t.text)),
-                          backgroundColor: t.card,
-                        ));
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Chave Pix copiada.',
+                              style: TextStyle(color: t.text),
+                            ),
+                            backgroundColor: t.card,
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.copy, size: 18),
                       label: const Text('Copiar chave'),
@@ -248,8 +288,9 @@ class SettingsTab extends StatelessWidget {
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () => shareText(
-                          'Dízimos e ofertas — $kPixBeneficiario\n'
-                          'Chave Pix (CNPJ): $kPixKey'),
+                        'Dízimos e ofertas — $kPixBeneficiario\n'
+                        'Chave Pix (CNPJ): $kPixKey',
+                      ),
                       icon: const Icon(Icons.share, size: 18),
                       label: const Text('Compartilhar'),
                     ),
@@ -285,14 +326,21 @@ class SettingsTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Text('Contato',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          'Contato',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: t.text,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(kAppName,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: t.muted, fontSize: 12)),
+        Text(
+          kAppName,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: t.muted, fontSize: 12),
+        ),
         const SizedBox(height: 8),
         _contactTile(
           icon: Icons.email,
@@ -356,11 +404,12 @@ class SettingsTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: TextStyle(color: t.text, fontSize: 15)),
+                    Text(title, style: TextStyle(color: t.text, fontSize: 15)),
                     const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: TextStyle(color: t.muted, fontSize: 12)),
+                    Text(
+                      subtitle,
+                      style: TextStyle(color: t.muted, fontSize: 12),
+                    ),
                   ],
                 ),
               ),
@@ -393,9 +442,11 @@ class SettingsTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text('Versão ${AppState.i.appVersion}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: t.muted, fontSize: 13)),
+              Text(
+                'Versão ${AppState.i.appVersion}',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.muted, fontSize: 13),
+              ),
               const SizedBox(height: 12),
               Text(
                 'Bíblia em 5 traduções, Hinário Novo Cântico, Músicas, '
@@ -445,9 +496,14 @@ class SettingsTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Leitura por voz',
-            style: TextStyle(
-                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          'Leitura por voz',
+          style: TextStyle(
+            color: t.text,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Material(
           color: t.card,
@@ -457,8 +513,7 @@ class SettingsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Voz',
-                    style: TextStyle(color: t.muted, fontSize: 13)),
+                Text('Voz', style: TextStyle(color: t.muted, fontSize: 13)),
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: const [
@@ -491,13 +546,18 @@ class SettingsTab extends StatelessWidget {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Text('Velocidade: ',
-                        style: TextStyle(color: t.muted, fontSize: 13)),
-                    Text(state.ttsRate.toStringAsFixed(2),
-                        style: TextStyle(
-                            color: t.accent,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                    Text(
+                      'Velocidade: ',
+                      style: TextStyle(color: t.muted, fontSize: 13),
+                    ),
+                    Text(
+                      state.ttsRate.toStringAsFixed(2),
+                      style: TextStyle(
+                        color: t.accent,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 Slider(
@@ -511,13 +571,18 @@ class SettingsTab extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text('Tom da voz: ',
-                        style: TextStyle(color: t.muted, fontSize: 13)),
-                    Text(state.ttsPitch.toStringAsFixed(2),
-                        style: TextStyle(
-                            color: t.accent,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                    Text(
+                      'Tom da voz: ',
+                      style: TextStyle(color: t.muted, fontSize: 13),
+                    ),
+                    Text(
+                      state.ttsPitch.toStringAsFixed(2),
+                      style: TextStyle(
+                        color: t.accent,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 Slider(
@@ -554,19 +619,22 @@ class SettingsTab extends StatelessWidget {
             if (!selected) AppState.i.setTheme(index);
           },
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(kThemeNames[index],
-                      style: TextStyle(color: t.text, fontSize: 15)),
+                  child: Text(
+                    kThemeNames[index],
+                    style: TextStyle(color: t.text, fontSize: 15),
+                  ),
                 ),
                 if (index == kSystemThemeIndex && isSystemMode) ...[
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: t.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(99),
@@ -602,9 +670,14 @@ class SettingsTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Plano de leitura',
-            style: TextStyle(
-                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          'Plano de leitura',
+          style: TextStyle(
+            color: t.text,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Material(
           color: t.card,
@@ -614,8 +687,10 @@ class SettingsTab extends StatelessWidget {
               SwitchListTile(
                 value: enabled,
                 activeTrackColor: t.accent,
-                title: Text('Plano anual',
-                    style: TextStyle(color: t.text, fontSize: 15)),
+                title: Text(
+                  'Plano anual',
+                  style: TextStyle(color: t.text, fontSize: 15),
+                ),
                 subtitle: Text(
                   'Mostra o progresso da Bíblia e a meta do dia na aba Bíblia.',
                   style: TextStyle(color: t.muted, fontSize: 12),
@@ -628,8 +703,10 @@ class SettingsTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Meta diária: $goal capítulo${goal == 1 ? '' : 's'}',
-                          style: TextStyle(color: t.text, fontSize: 14)),
+                      Text(
+                        'Meta diária: $goal capítulo${goal == 1 ? '' : 's'}',
+                        style: TextStyle(color: t.text, fontSize: 14),
+                      ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
@@ -649,8 +726,7 @@ class SettingsTab extends StatelessWidget {
                               divisions: 9,
                               activeColor: t.accent,
                               label: '$goal',
-                              onChanged: (v) =>
-                                  state.setDailyGoal(v.round()),
+                              onChanged: (v) => state.setDailyGoal(v.round()),
                             ),
                           ),
                           IconButton(
@@ -678,9 +754,14 @@ class SettingsTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Backup',
-            style: TextStyle(
-                color: t.text, fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          'Backup',
+          style: TextStyle(
+            color: t.text,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         _contactTile(
           icon: Icons.system_update_alt,
@@ -692,7 +773,7 @@ class SettingsTab extends StatelessWidget {
         _contactTile(
           icon: Icons.settings_backup_restore,
           title: 'Importar dados',
-          subtitle: 'Restaura um backup colado abaixo',
+          subtitle: 'Escolher um arquivo JSON ou colar o backup',
           onTap: () => _importData(context),
         ),
       ],
@@ -702,18 +783,33 @@ class SettingsTab extends StatelessWidget {
   Future<void> _exportData(BuildContext context) async {
     final t = appTheme;
     final json = AppState.i.buildExportJson();
-    await copyText(json);
-    if (!context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(SnackBar(
-      content: Text(
-        'Backup copiado para a área de transferência. Envie por e-mail/'
-        'WhatsApp ou salve num arquivo.',
-        style: TextStyle(color: t.text),
-      ),
-      backgroundColor: t.card,
-    ));
-    shareText(json);
+    final file = XFile.fromData(
+      Uint8List.fromList(utf8.encode(json)),
+      mimeType: 'application/json',
+      name: 'biblia-ipm-backup.json',
+    );
+    try {
+      final box = context.findRenderObject() as RenderBox?;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [file],
+          fileNameOverrides: ['biblia-ipm-backup.json'],
+          sharePositionOrigin: box == null
+              ? null
+              : box.localToGlobal(Offset.zero) & box.size,
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Não foi possível compartilhar o arquivo de backup.',
+            style: TextStyle(color: t.text),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _importData(BuildContext context) async {
@@ -730,7 +826,41 @@ class SettingsTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Cole abaixo o backup (JSON) copiado pela opção "Exportar dados".',
+                'Escolha um arquivo de backup ou cole seu conteúdo JSON abaixo.',
+                style: TextStyle(color: t.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              TextButton.icon(
+                icon: const Icon(Icons.folder_open),
+                label: const Text('Escolher arquivo JSON'),
+                onPressed: () async {
+                  try {
+                    final file = await openFile(
+                      acceptedTypeGroups: [
+                        const XTypeGroup(
+                          label: 'Backup JSON',
+                          extensions: ['json'],
+                          mimeTypes: ['application/json'],
+                          uniformTypeIdentifiers: ['public.json'],
+                        ),
+                      ],
+                    );
+                    if (file == null) return;
+                    final text = await file.readAsString();
+                    if (!ctx.mounted) return;
+                    ctrl.text = text;
+                  } catch (_) {
+                    if (!ctx.mounted) return;
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Não foi possível abrir o arquivo.'),
+                      ),
+                    );
+                  }
+                },
+              ),
+              Text(
+                'Músicas, boletim e preferências serão substituídos. Notas e progresso serão mesclados.',
                 style: TextStyle(color: t.muted, fontSize: 13),
               ),
               const SizedBox(height: 10),
@@ -739,17 +869,20 @@ class SettingsTab extends StatelessWidget {
                 maxLines: 8,
                 style: TextStyle(color: t.text),
                 decoration: const InputDecoration(
-                    hintText: '{ "export": 1, ... }'),
+                  hintText: '{ "export": 1, ... }',
+                ),
               ),
             ],
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancelar')),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
             TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Restaurar')),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Restaurar'),
+            ),
           ],
         ),
       );
@@ -759,24 +892,37 @@ class SettingsTab extends StatelessWidget {
       try {
         final decoded = jsonDecode(text);
         if (decoded is! Map || decoded['export'] != 1) {
-          messenger.showSnackBar(SnackBar(
-            content: Text('Backup inválido.', style: TextStyle(color: t.text)),
-            backgroundColor: t.card,
-          ));
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                'Backup inválido.',
+                style: TextStyle(color: t.text),
+              ),
+              backgroundColor: t.card,
+            ),
+          );
           return;
         }
         await AppState.i.importFromJson(text);
-        messenger.showSnackBar(SnackBar(
-          content: Text('Dados restaurados com sucesso.',
-              style: TextStyle(color: t.text)),
-          backgroundColor: t.card,
-        ));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Dados restaurados com sucesso.',
+              style: TextStyle(color: t.text),
+            ),
+            backgroundColor: t.card,
+          ),
+        );
       } catch (_) {
-        messenger.showSnackBar(SnackBar(
-          content: Text('Não foi possível ler o backup.',
-              style: TextStyle(color: t.text)),
-          backgroundColor: t.card,
-        ));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Não foi possível ler o backup.',
+              style: TextStyle(color: t.text),
+            ),
+            backgroundColor: t.card,
+          ),
+        );
       }
     } finally {
       ctrl.dispose();

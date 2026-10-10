@@ -6,6 +6,7 @@ import 'package:biblia_app/models.dart';
 import 'package:biblia_app/store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +18,10 @@ void main() {
 
   group('stripDiacritics / busca sem acento', () {
     test('remove acentos e cedilha', () {
-      expect(stripDiacritics('É água do correio? Não.'),
-          'É agua do correio? Nao.');
+      expect(
+        stripDiacritics('É água do correio? Não.'),
+        'É agua do correio? Nao.',
+      );
       expect(stripDiacritics('João Ferreira'), 'Joao Ferreira');
     });
 
@@ -41,8 +44,11 @@ void main() {
         final d = day.add(Duration(days: i - 1));
         seen.add(dailyVerseFor(d));
       }
-      expect(seen.length, kDailyVerses.length,
-          reason: 'alguma entrada da lista nunca é exibida');
+      expect(
+        seen.length,
+        kDailyVerses.length,
+        reason: 'alguma entrada da lista nunca é exibida',
+      );
     });
 
     test('a rotação cobre o dia 365 comum e o 366 bissexto', () {
@@ -70,10 +76,11 @@ void main() {
         'hl_v:18:23:1': 2,
       });
       await AppState.i.load();
-      final data = jsonDecode(AppState.i.buildExportJson())
-          as Map<String, dynamic>;
-      final highlights = (data['highlights'] as Map)
-          .map((k, v) => MapEntry(k.toString(), v));
+      final data =
+          jsonDecode(AppState.i.buildExportJson()) as Map<String, dynamic>;
+      final highlights = (data['highlights'] as Map).map(
+        (k, v) => MapEntry(k.toString(), v),
+      );
       expect(highlights.containsKey('v:42:3:16'), isFalse);
       expect(highlights['v:18:23:1'], 2);
     });
@@ -93,22 +100,108 @@ void main() {
       await AppState.i.unmarkChapterRead(1, 2);
 
       expect(AppState.i.isChapterRead(1, 2), isFalse);
-      final byDay = jsonDecode(AppState.i.prefs.getString('reads_by_day')!)
-          as Map<String, dynamic>;
+      final byDay = jsonDecode(
+        AppState.i.prefs.getString('reads_by_day')!,
+      ) as Map<String, dynamic>;
       expect(byDay[yesterday], 0, reason: 'deve debitar de ontem, não de hoje');
       expect(AppState.i.todayReadCount, 0);
     });
 
     test('marca registra o dia da leitura', () async {
       await AppState.i.markChapterRead(1, 2);
-      final dayMap =
-          jsonDecode(AppState.i.prefs.getString('read_day_by_chapter')!)
-              as Map<String, dynamic>;
+      final dayMap = jsonDecode(
+        AppState.i.prefs.getString('read_day_by_chapter')!,
+      ) as Map<String, dynamic>;
       expect(dayMap['1:2'], _key(DateTime.now()));
     });
   });
 
   group('backup', () {
+    test('falha de gravação recupera dados anteriores', () async {
+      final store = _FailOnceStore();
+      SharedPreferencesStorePlatform.instance = store;
+      SharedPreferences.resetStatic();
+      await AppState.i.load();
+      await AppState.i.setNote('v:0:1:1', 'original');
+      store.failNextNotes = true;
+      await expectLater(
+        AppState.i.importFromJson(
+          jsonEncode({
+            'export': 1,
+            'highlights': {'v:0:1:1': 2},
+            'notes': {'v:0:1:1': 'alterada'},
+          }),
+        ),
+        throwsStateError,
+      );
+      expect(AppState.i.getNote('v:0:1:1'), 'original');
+      expect(AppState.i.getHighlight('v:0:1:1'), -1);
+      expect(AppState.i.prefs.getString('backup_before_restore'), isNotNull);
+      await AppState.i.load();
+      expect(AppState.i.getNote('v:0:1:1'), 'original');
+    });
+
+    test('músicas novas iguais têm IDs distintos', () {
+      expect(Song.create('A', 'B').id, isNot(Song.create('A', 'B').id));
+    });
+
+    test('seção inválida não altera notas nem destaques', () async {
+      await AppState.i.setNote('v:0:1:1', 'original');
+      final data = {
+        'export': 1,
+        'notes': {'v:0:1:1': 'alterada'},
+        'highlights': {'v:0:1:1': 2},
+        'songs': 'inválido',
+      };
+      await expectLater(
+        AppState.i.importFromJson(jsonEncode(data)),
+        throwsA(anything),
+      );
+      expect(AppState.i.getNote('v:0:1:1'), 'original');
+      expect(AppState.i.getHighlight('v:0:1:1'), -1);
+    });
+
+    test('editar música mantém ID e vínculos após recarregar', () async {
+      final song = Song('Título', 'Letra');
+      AppState.i.songs = [song];
+      final key = 's:${song.id}:0';
+      await AppState.i.setNote(key, 'Minha nota');
+      await AppState.i.setHighlight(key, 2);
+      song.title = 'Novo título';
+      song.lyrics = 'Nova letra';
+      await AppState.i.saveSongs();
+      await AppState.i.load();
+      expect(AppState.i.songs.single.id, song.id);
+      expect(AppState.i.getNote(key), 'Minha nota');
+      expect(AppState.i.getHighlight(key), 2);
+    });
+
+    test('backup antigo recupera contagens sem duplicar', () async {
+      final raw = jsonEncode({
+        'export': 1,
+        'read_chapters': ['0:0'],
+        'reads_by_day': {'2026-10-01': 1},
+      });
+      await AppState.i.importFromJson(raw);
+      await AppState.i.importFromJson(raw);
+      expect(AppState.i.readsByDay['2026-10-01'], 1);
+    });
+
+    test('restaurar preserva o dia local de capítulo já lido', () async {
+      await AppState.i.markChapterRead(0, 0);
+      final original = AppState.i.readDayByChapter['0:0'];
+      await AppState.i.importFromJson(
+        jsonEncode({
+          'export': 1,
+          'read_chapters': ['0:0'],
+          'read_day_by_chapter': {'0:0': '2020-01-01'},
+          'reads_by_day': {'2020-01-01': 1},
+        }),
+      );
+      expect(AppState.i.readDayByChapter['0:0'], original);
+      expect(AppState.i.todayReadCount, 1);
+    });
+
     test('exporta e restaura as configurações do plano', () async {
       AppState.i.setPlanEnabled(false);
       AppState.i.setDailyGoal(2);
@@ -132,8 +225,8 @@ void main() {
         ..clear()
         ..add(ChurchEvent('Culto de domingo', 10, 3, 2027, '19:00', ''));
 
-      final data = jsonDecode(AppState.i.buildExportJson())
-          as Map<String, dynamic>;
+      final data =
+          jsonDecode(AppState.i.buildExportJson()) as Map<String, dynamic>;
       // Backup editado à mão sem as listas do boletim.
       data.remove('aniversariantes');
       data.remove('eventos');
@@ -158,8 +251,8 @@ void main() {
       });
       await AppState.i.load();
 
-      final data = jsonDecode(AppState.i.buildExportJson())
-          as Map<String, dynamic>;
+      final data =
+          jsonDecode(AppState.i.buildExportJson()) as Map<String, dynamic>;
       // Reimporta o próprio backup: a contagem do dia não pode dobrar.
       await AppState.i.importFromJson(jsonEncode(data));
 
@@ -173,8 +266,11 @@ void main() {
       final before = AppState.i.version;
       await AppState.i.setVersion('xyz');
       expect(AppState.i.version, before);
-      expect(AppState.i.prefs.containsKey('biblia_version'), isFalse,
-          reason: 'o código inválido não pode ser persistido');
+      expect(
+        AppState.i.prefs.containsKey('biblia_version'),
+        isFalse,
+        reason: 'o código inválido não pode ser persistido',
+      );
     });
 
     test('posições ficam por versão e são cached', () async {
@@ -189,7 +285,9 @@ void main() {
       await AppState.i.savePosition(1, 1);
       final json = AppState.i.buildExportJson();
       final data = jsonDecode(json) as Map<String, dynamic>;
-      data['positions'] = {'ara': {'b': 9, 'c': 3}};
+      data['positions'] = {
+        'ara': {'b': 9, 'c': 3},
+      };
       data['version'] = 'ara';
       await AppState.i.importFromJson(jsonEncode(data));
       expect(AppState.i.lastPosition!.book, 9);
@@ -198,9 +296,7 @@ void main() {
 
   group('meta diária', () {
     test('valor fora da faixa é limitado de 1 a 10', () async {
-      SharedPreferences.setMockInitialValues({
-        'plan_daily_goal': 99,
-      });
+      SharedPreferences.setMockInitialValues({'plan_daily_goal': 99});
       await AppState.i.load();
       expect(AppState.i.dailyGoal, 10);
 
@@ -213,3 +309,17 @@ void main() {
 String _key(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
+
+class _FailOnceStore extends InMemorySharedPreferencesStore {
+  _FailOnceStore() : super.empty();
+  bool failNextNotes = false;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (failNextNotes && key == 'flutter.notes') {
+      failNextNotes = false;
+      return false;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}

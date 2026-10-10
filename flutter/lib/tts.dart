@@ -123,6 +123,8 @@ class FakeTtsEngine implements TtsEngine {
   @override
   Future<void> setLanguage(String language) async {
     languagesSet.add(language);
+    selectedVoiceName = null;
+    selectedVoiceLocale = null;
   }
 
   @override
@@ -178,9 +180,7 @@ class FakeTtsEngine implements TtsEngine {
 /// Fala uma frase simples (versículo) ou uma sequência (capítulo),
 /// verso a verso, atualizando [phase] e [index] para a UI reagir.
 class TtsService {
-  TtsService._({
-    TtsEngine? engine,
-  }) : _engine = engine ?? FlutterTtsEngine() {
+  TtsService._({TtsEngine? engine}) : _engine = engine ?? FlutterTtsEngine() {
     // Configuração inicial síncrona — sem chamadas de plataforma.
   }
 
@@ -295,7 +295,8 @@ class TtsService {
         realVoice = false;
       }
       _appliedVoice = wanted;
-    } else if (wanted == 'default') {
+    } else if (wanted == 'default' && _appliedVoice != 'default') {
+      await _engine.setLanguage('pt-BR');
       _appliedVoice = 'default';
       realVoice = false;
     }
@@ -339,11 +340,14 @@ class TtsService {
     if (cancel) return;
     final c = Completer<void>();
     _completer = c;
-    _engine.speak(text).then((_) {
-      if (!c.isCompleted) c.complete();
-    }).catchError((_) {
-      if (!c.isCompleted) c.complete();
-    });
+    _engine
+        .speak(text)
+        .then((_) {
+          if (!c.isCompleted) c.complete();
+        })
+        .catchError((_) {
+          if (!c.isCompleted) c.complete();
+        });
     return c.future;
   }
 
@@ -440,8 +444,7 @@ class TtsService {
     queue = [];
     cursor = 0;
     index.value = null;
-    if (phase.value == TtsPhase.playing ||
-        phase.value == TtsPhase.paused) {
+    if (phase.value == TtsPhase.playing || phase.value == TtsPhase.paused) {
       phase.value = TtsPhase.none;
     }
   }

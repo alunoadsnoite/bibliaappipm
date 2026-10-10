@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import 'backup_validation.dart';
 import 'daily.dart';
 import 'models.dart';
 import 'theme.dart';
@@ -35,14 +37,17 @@ const String kAppVersion = '5.3.0';
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
 
-const MethodChannel _migrationChannel =
-    MethodChannel('br.com.valdenor.bibliaapp/migration');
-const MethodChannel _widgetChannel =
-    MethodChannel('br.com.valdenor.bibliaapp/widget');
+const MethodChannel _migrationChannel = MethodChannel(
+  'br.com.valdenor.bibliaapp/migration',
+);
+const MethodChannel _widgetChannel = MethodChannel(
+  'br.com.valdenor.bibliaapp/widget',
+);
 
 /// Decodifica o JSON de uma Bíblia em um isolate separado, para não travar a
 /// interface na leitura de arquivos grandes (ex.: 4 MB por tradução).
-List<dynamic> _decodeBibleJson(String text) => jsonDecode(text) as List<dynamic>;
+List<dynamic> _decodeBibleJson(String text) =>
+    jsonDecode(text) as List<dynamic>;
 
 /// Cast seguro com retorno `null` se o tipo não bater — evita `TypeError` ao
 /// processar dados vindos de fora (canal nativo, backup editado à mão).
@@ -53,13 +58,26 @@ class AppState extends ChangeNotifier {
   static final AppState i = AppState._();
 
   late SharedPreferences prefs;
+  bool storageAvailable = true;
+  SharedPreferencesStorePlatform? _failedStore;
+  final List<String> loadErrors = [];
 
   /// Obtém o SharedPreferences sem deixar o app nascer sem ele: se o canal de
   /// plataforma falhar, cai num armazenamento em memória para a sessão.
   Future<SharedPreferences> _initPrefs() async {
     try {
-      return await SharedPreferences.getInstance();
+      if (_failedStore != null) {
+        SharedPreferencesStorePlatform.instance = _failedStore!;
+        // ignore: invalid_use_of_visible_for_testing_member
+        SharedPreferences.resetStatic();
+        _failedStore = null;
+      }
+      final result = await SharedPreferences.getInstance();
+      storageAvailable = true;
+      return result;
     } catch (e) {
+      _failedStore = SharedPreferencesStorePlatform.instance;
+      storageAvailable = false;
       debugPrint('SharedPreferences indisponível, usando memória: $e');
       // Necessário para cair no armazenamento em memória mesmo sem o plugin.
       // ignore: invalid_use_of_visible_for_testing_member
@@ -115,6 +133,7 @@ class AppState extends ChangeNotifier {
   Map<String, String> readDayByChapter = {};
 
   Future<void> load() async {
+    loadErrors.clear();
     prefs = await _initPrefs();
     // O cache de posição reflete o conteúdo das preferências; se o store for
     // recarregado (ou redefinido), valores antigos ficariam errados.
@@ -129,8 +148,8 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       // Mantém o fallback ([kAppVersion]) fora de plataformas suportadas.
     }
-    themeIndex = prefs.getInt('theme') ??
-        ((prefs.getBool('night') ?? false) ? 1 : 0);
+    themeIndex =
+        prefs.getInt('theme') ?? ((prefs.getBool('night') ?? false) ? 1 : 0);
     if (themeIndex < 0 || themeIndex >= kThemeNames.length) themeIndex = 0;
     fontScale = snapFontLevel(prefs.getDouble('font_scale') ?? 1.0);
     version = prefs.getString('biblia_version') ?? 'ara';
@@ -159,9 +178,9 @@ class AppState extends ChangeNotifier {
     await _optional('versículo do dia', _saveDailyVerse);
 
     await _optional('hinário', () async {
-      final hymnJson =
-          jsonDecode(await rootBundle.loadString('assets/hinos.json'))
-              as List<dynamic>;
+      final hymnJson = jsonDecode(
+        await rootBundle.loadString('assets/hinos.json'),
+      ) as List<dynamic>;
       hymns = hymnJson
           .map((e) => Hymn.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -176,9 +195,9 @@ class AppState extends ChangeNotifier {
     await _optional('normalização de chaves de músicas', _migrateSongKeys);
 
     await _optional('biblioteca', () async {
-      final libraryJson =
-          jsonDecode(await rootBundle.loadString('assets/biblioteca.json'))
-              as Map<String, dynamic>;
+      final libraryJson = jsonDecode(
+        await rootBundle.loadString('assets/biblioteca.json'),
+      ) as Map<String, dynamic>;
       biblioteca = ((libraryJson['texts'] as List<dynamic>?) ?? [])
           .map((e) => BibliotecaText.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -197,6 +216,7 @@ class AppState extends ChangeNotifier {
     try {
       await step();
     } catch (error, stack) {
+      loadErrors.add(label);
       debugPrint('Falha ao carregar "$label": $error\n$stack');
     }
   }
@@ -206,6 +226,7 @@ class AppState extends ChangeNotifier {
     try {
       step();
     } catch (error, stack) {
+      loadErrors.add(label);
       debugPrint('Falha ao carregar "$label": $error\n$stack');
     }
   }
@@ -218,7 +239,11 @@ class AppState extends ChangeNotifier {
       final (book, chapter, v) = verse;
       final verseText = bible[book].chapters[chapter][v];
       final ref = formatRef(bible, book, chapter, v);
-      return {'text': verseText, 'ref': ref, 'date': today.toIso8601String().split('T')[0]};
+      return {
+        'text': verseText,
+        'ref': ref,
+        'date': today.toIso8601String().split('T')[0],
+      };
     }
     return null;
   }
@@ -357,18 +382,8 @@ class AppState extends ChangeNotifier {
   ///
   /// Antes a chave usava o índice na lista, que muda quando qualquer música é
   /// excluída ou reordenada — e as notas passavam a apontar para a música
-  /// errada. O id vem do conteúdo (título + letra), que não muda.
-  static String songId(Song s) => _stableHash('${s.title}\u0000${s.lyrics}');
-
-  /// FNV-1a de 31 bits. O `hashCode` do Dart não é garantido entre execuções,
-  /// então não serve para uma chave persistida.
-  static String _stableHash(String input) {
-    var hash = 0x811c9dc5;
-    for (final unit in input.codeUnits) {
-      hash = (((hash ^ unit) * 0x01000193) & 0xffffffff) & 0x7fffffff;
-    }
-    return hash.toRadixString(16);
-  }
+  /// errada. O ID é persistido e permanece o mesmo ao editar título ou letra.
+  static String songId(Song s) => s.id;
 
   /// Converte, uma única vez, as chaves antigas `s:<índice>:<linha>` das notas
   /// e destaques de músicas para `s:<id>:<linha>`.
@@ -420,15 +435,19 @@ class AppState extends ChangeNotifier {
   Future<void> _loadRedLetter() async {
     try {
       final raw = jsonDecode(
-              await rootBundle.loadString('assets/redletter.json'))
-          as Map<String, dynamic>;
-      redLetter = raw.map((book, chapters) => MapEntry(
-            book,
-            (chapters as Map<String, dynamic>).map(
-                (ch, vs) => MapEntry(ch, (vs as List<dynamic>).cast<int>())),
-          ));
+        await rootBundle.loadString('assets/redletter.json'),
+      ) as Map<String, dynamic>;
+      redLetter = raw.map(
+        (book, chapters) => MapEntry(
+          book,
+          (chapters as Map<String, dynamic>).map(
+            (ch, vs) => MapEntry(ch, (vs as List<dynamic>).cast<int>()),
+          ),
+        ),
+      );
     } catch (_) {
       redLetter = {};
+      rethrow;
     }
   }
 
@@ -481,7 +500,10 @@ class AppState extends ChangeNotifier {
   /// Texto de um mesmo versículo em todas as traduções, lado a lado.
   /// Cada entrada é (abreviação da versão, texto do versículo).
   Future<List<(String, String)>> comparedVerses(
-      int book, int chapter, int verse) async {
+    int book,
+    int chapter,
+    int verse,
+  ) async {
     await ensureAllBibles();
     final out = <(String, String)>[];
     for (var i = 0; i < kVersionOrder.length; i++) {
@@ -515,12 +537,12 @@ class AppState extends ChangeNotifier {
   Future<void> _loadSongs() async {
     try {
       final stored = prefs.getString('songs_json');
-      final text =
-          stored ?? await rootBundle.loadString('assets/musicas.json');
+      final text = stored ?? await rootBundle.loadString('assets/musicas.json');
       final arr = jsonDecode(text) as List<dynamic>;
       songs = arr.map((e) => Song.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       songs = [];
+      rethrow;
     }
   }
 
@@ -540,6 +562,7 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       birthdays = [];
       events = [];
+      rethrow;
     }
   }
 
@@ -685,9 +708,11 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> savePosition(int book, int chapter) async {
-    _positionCache[_positionKey] = Position(book, chapter);
+    _positionCache[version] = Position(book, chapter);
     await prefs.setString(
-        _positionKey, jsonEncode(Position(book, chapter).toJson()));
+      _positionKey,
+      jsonEncode(Position(book, chapter).toJson()),
+    );
   }
 
   // ------------------------------------------------------------- histórico
@@ -708,13 +733,16 @@ class AppState extends ChangeNotifier {
 
   Future<void> addRecent(int book, int chapter) async {
     recent.removeWhere(
-        (r) => r.version == version && r.book == book && r.chapter == chapter);
+      (r) => r.version == version && r.book == book && r.chapter == chapter,
+    );
     recent.insert(0, RecentRef(version, book, chapter));
     while (recent.length > kMaxRecent) {
       recent.removeLast();
     }
     await prefs.setString(
-        'recent', jsonEncode(recent.map((r) => r.toJson()).toList()));
+      'recent',
+      jsonEncode(recent.map((r) => r.toJson()).toList()),
+    );
     notifyListeners();
   }
 
@@ -722,7 +750,9 @@ class AppState extends ChangeNotifier {
     if (index < 0 || index >= recent.length) return;
     recent.removeAt(index);
     await prefs.setString(
-        'recent', jsonEncode(recent.map((r) => r.toJson()).toList()));
+      'recent',
+      jsonEncode(recent.map((r) => r.toJson()).toList()),
+    );
     notifyListeners();
   }
 
@@ -742,8 +772,7 @@ class AppState extends ChangeNotifier {
 
   String? getNote(String key) => notes[key];
 
-  bool hasNote(String key) =>
-      (notes[key] ?? '').trim().isNotEmpty;
+  bool hasNote(String key) => (notes[key] ?? '').trim().isNotEmpty;
 
   Future<void> setNote(String key, String text) async {
     final t = text.trim();
@@ -770,8 +799,9 @@ class AppState extends ChangeNotifier {
     final raw = prefs.getString('read_chapters');
     if (raw != null && raw.isNotEmpty) {
       try {
-        readChapters =
-            (jsonDecode(raw) as List<dynamic>).cast<String>().toSet();
+        readChapters = (jsonDecode(raw) as List<dynamic>)
+            .cast<String>()
+            .toSet();
       } catch (_) {
         readChapters = {};
       }
@@ -800,7 +830,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  String _dateKey(DateTime d) => '${d.year}-'
+  String _dateKey(DateTime d) =>
+      '${d.year}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
@@ -810,8 +841,7 @@ class AppState extends ChangeNotifier {
 
   int get totalRead => readChapters.length;
 
-  double get planProgress =>
-      totalChapters == 0 ? 0 : totalRead / totalChapters;
+  double get planProgress => totalChapters == 0 ? 0 : totalRead / totalChapters;
 
   bool isChapterRead(int book, int chapter) =>
       readChapters.contains('$book:$chapter');
@@ -854,9 +884,13 @@ class AppState extends ChangeNotifier {
       readDayByChapter[key] = day;
       await prefs.setString('reads_by_day', jsonEncode(readsByDay));
       await prefs.setString(
-          'read_day_by_chapter', jsonEncode(readDayByChapter));
+        'read_day_by_chapter',
+        jsonEncode(readDayByChapter),
+      );
       await prefs.setString(
-          'read_chapters', jsonEncode(readChapters.toList()..sort()));
+        'read_chapters',
+        jsonEncode(readChapters.toList()..sort()),
+      );
     }
     notifyListeners();
   }
@@ -872,10 +906,14 @@ class AppState extends ChangeNotifier {
       readsByDay[readOn] = v < 0 ? 0 : v;
       await prefs.setString('reads_by_day', jsonEncode(readsByDay));
       await prefs.setString(
-          'read_day_by_chapter', jsonEncode(readDayByChapter));
+        'read_day_by_chapter',
+        jsonEncode(readDayByChapter),
+      );
     }
     await prefs.setString(
-        'read_chapters', jsonEncode(readChapters.toList()..sort()));
+      'read_chapters',
+      jsonEncode(readChapters.toList()..sort()),
+    );
     notifyListeners();
   }
 
@@ -899,8 +937,7 @@ class AppState extends ChangeNotifier {
   // ------------------------------------------------------------- boletim
 
   Future<void> saveBoletim() async {
-    await prefs.setString(
-        'boletim_json', parseBoletimJson(birthdays, events));
+    await prefs.setString('boletim_json', parseBoletimJson(birthdays, events));
     notifyListeners();
   }
 
@@ -975,172 +1012,160 @@ class AppState extends ChangeNotifier {
   /// Mescla destaques, notas, capítulos lidos e recentes; sobrescreve
   /// músicas, boletim e preferências.
   Future<void> importFromJson(String raw) async {
-    Map<String, dynamic> data;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic> || decoded['export'] != 1) {
+      throw const FormatException('Backup inválido.');
+    }
+    validateBackup(decoded, bible, kVersionOrder);
+    if (!storageAvailable) throw StateError('Armazenamento indisponível.');
+    final snapshot = {
+      for (final key in prefs.getKeys())
+        if (key != 'backup_before_restore') key: prefs.get(key),
+    };
+    // Cópia recuperável persistida antes da primeira alteração.
+    if (!await prefs.setString('backup_before_restore', jsonEncode(snapshot))) {
+      throw StateError('Não foi possível preservar os dados atuais.');
+    }
     try {
-      data = jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      return;
-    }
-
-    final highlights = data['highlights'];
-    if (highlights is Map) {
-      for (var e in highlights.entries) {
-        final key = normalizeVKey(e.key.toString());
-        final value = e.value;
-        if (value is int) {
-          await prefs.setInt('hl_$key', value);
+      await _applyBackup(raw);
+    } catch (error) {
+      try {
+        for (final key in prefs.getKeys()) {
+          if (key != 'backup_before_restore' && !await prefs.remove(key)) {
+            throw StateError('Falha ao recuperar $key.');
+          }
         }
-      }
-    }
-
-    final notesIn = data['notes'];
-    if (notesIn is Map) {
-      for (var e in notesIn.entries) {
-        final key = normalizeVKey(e.key.toString());
-        final t = (e.value as String? ?? '').trim();
-        if (t.isEmpty) {
-          notes.remove(key);
-        } else {
-          notes[key] = t;
+        for (final entry in snapshot.entries) {
+          if (!await _writePreference(entry.key, entry.value!)) {
+            throw StateError('Falha ao recuperar ${entry.key}.');
+          }
         }
+        await load();
+      } catch (_) {
+        storageAvailable = false;
+        notifyListeners();
+        throw StateError(
+          'Restauração interrompida. A cópia anterior está preservada para recuperação.',
+        );
       }
-      await prefs.setString('notes', jsonEncode(notes));
+      throw StateError(
+        'Restauração cancelada; os dados anteriores foram recuperados. $error',
+      );
     }
+  }
 
-    final songsIn = data['songs'];
-    if (songsIn is String && songsIn.trim().isNotEmpty) {
-      try {
-        final arr = jsonDecode(songsIn) as List<dynamic>;
-        final parsed = arr
-            .map((e) => Song.fromJson(e as Map<String, dynamic>))
-            .toList();
-        songs = parsed;
-        await prefs.setString('songs_json', songsIn);
-      } catch (_) {}
+  Future<void> _applyBackup(String raw) async {
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    final writes = <String, Object>{};
+    for (final entry in ((data['highlights'] as Map?) ?? {}).entries) {
+      writes['hl_${normalizeVKey(entry.key.toString())}'] = entry.value as int;
     }
-
-    final birthdaysIn = data['aniversariantes'];
-    final eventosIn = data['eventos'];
-    // Cada seção é restaurada de forma independente: um backup que só tem
-    // eventos NÃO apaga os aniversariantes locais (e vice-versa).
-    if (birthdaysIn is List) {
-      try {
-        birthdays = birthdaysIn
-            .map((e) => Birthday.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } catch (error, stack) {
-        debugPrint('Aniversariantes inválidos no backup: $error\n$stack');
-      }
-    }
-    if (eventosIn is List) {
-      try {
-        events = eventosIn
-            .map((e) => ChurchEvent.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } catch (error, stack) {
-        debugPrint('Eventos inválidos no backup: $error\n$stack');
+    final mergedNotes = {...notes};
+    for (final entry in ((data['notes'] as Map?) ?? {}).entries) {
+      final key = normalizeVKey(entry.key.toString());
+      final text = (entry.value as String).trim();
+      if (text.isEmpty) {
+        mergedNotes.remove(key);
+      } else {
+        mergedNotes[key] = text;
       }
     }
-    if (birthdaysIn is List || eventosIn is List) {
-      await saveBoletim();
+    writes['notes'] = jsonEncode(mergedNotes);
+    if (data.containsKey('songs')) {
+      writes['songs_json'] = data['songs'] as String;
     }
-
-    final read = data['read_chapters'];
-    if (read is List) {
-      readChapters = {
-        ...readChapters,
-        ...read.whereType<String>(),
-      };
-      await prefs.setString(
-          'read_chapters', jsonEncode(readChapters.toList()..sort()));
+    {
+      writes['boletim_json'] = jsonEncode({
+        'aniversariantes':
+            data['aniversariantes'] ??
+            birthdays.map((b) => b.toJson()).toList(),
+        'eventos': data['eventos'] ?? events.map((e) => e.toJson()).toList(),
+      });
     }
-    final dayMap = data['read_day_by_chapter'];
-    // Dias conhecidos locais, para não contar em dobro na recomputação abaixo.
-    final localDays = {...readDayByChapter};
-    final importedDays = <String, String>{};
-    if (dayMap is Map) {
-      for (var e in dayMap.entries) {
-        final v = e.value;
-        if (v is String && v.isNotEmpty) importedDays[e.key.toString()] = v;
+    final chapters = {
+      ...readChapters,
+      ...((data['read_chapters'] as List?) ?? []).cast<String>(),
+    };
+    final days = {...readDayByChapter};
+    final counts = {...readsByDay};
+    final importedDays = (data['read_day_by_chapter'] as Map?) ?? {};
+    for (final entry in importedDays.entries) {
+      final key = entry.key as String;
+      if (!chapters.contains(key) || days.containsKey(key)) continue;
+      final day = entry.value as String;
+      days[key] = day;
+      counts[day] = (counts[day] ?? 0) + 1;
+    }
+    if (!data.containsKey('read_day_by_chapter')) {
+      for (final entry in ((data['reads_by_day'] as Map?) ?? {}).entries) {
+        final day = entry.key as String;
+        final count = entry.value as int;
+        if (count > (counts[day] ?? 0)) counts[day] = count;
       }
-      readDayByChapter = {...readDayByChapter, ...importedDays};
-      await prefs.setString(
-          'read_day_by_chapter', jsonEncode(readDayByChapter));
     }
-    // Recalcula as contagens diárias a partir do mapeamento de dia, garantindo
-    // coerência com readChapters (um restore que sobrescrevia reads_by_day
-    // deixava dados contraditórios). Capítulos já contados localmente não são
-    // somados de novo.
-    final reads = data['reads_by_day'];
-    if (reads is Map) {
-      final merged = <String, int>{...readsByDay};
-      for (final entry in importedDays.entries) {
-        if (localDays.containsKey(entry.key)) continue;
-        final day = entry.value;
-        merged[day] = (merged[day] ?? 0) + 1;
-      }
-      readsByDay = merged;
-      await prefs.setString('reads_by_day', jsonEncode(readsByDay));
+    writes['read_chapters'] = jsonEncode(chapters.toList()..sort());
+    writes['read_day_by_chapter'] = jsonEncode(days);
+    writes['reads_by_day'] = jsonEncode(counts);
+    if (data.containsKey('recent')) {
+      final refs = (data['recent'] as List).map(
+        (e) => RecentRef.fromJson(e as Map<String, dynamic>),
+      );
+      writes['recent'] = jsonEncode(
+        refs.take(kMaxRecent).map((r) => r.toJson()).toList(),
+      );
     }
-
-    final recentIn = data['recent'];
-    if (recentIn is List) {
-      try {
-        recent = recentIn
-            .map((e) => RecentRef.fromJson(e as Map<String, dynamic>))
-            .toList();
-        while (recent.length > kMaxRecent) {
-          recent.removeLast();
-        }
-        await prefs.setString(
-            'recent', jsonEncode(recent.map((r) => r.toJson()).toList()));
-      } catch (_) {}
+    for (final entry in ((data['positions'] as Map?) ?? {}).entries) {
+      writes['lastpos_${entry.key}'] = jsonEncode(entry.value);
     }
-
-    final positions = data['positions'];
-    if (positions is Map) {
-      for (var e in positions.entries) {
-        try {
-          final p = Position.fromJson(e.value as Map<String, dynamic>);
-          await prefs.setString(
-              'lastpos_${e.key}', jsonEncode(p.toJson()));
-        } catch (_) {}
-      }
-      // O cache em memória pode ter valores antigos da sessão atual.
-      _positionCache.clear();
-    }
-
-    final savedVersion = data['version'];
-    if (savedVersion is String && kVersionOrder.contains(savedVersion)) {
-      await setVersion(savedVersion);
+    final versionIn = data['version'];
+    if (versionIn is String && kVersionOrder.contains(versionIn)) {
+      await _ensureBible(versionIn); // asset validado antes das escritas
+      writes['biblia_version'] = versionIn;
     }
     final theme = data['theme'];
     if (theme is int && theme >= 0 && theme < kThemeNames.length) {
-      setTheme(theme);
+      writes['theme'] = theme;
     }
-
-    // `font_scale` era exportado mas nunca restaurado: um backup reimportado
-    // perdia o tamanho de fonte escolhido pelo usuário.
-    final font = data['font_scale'];
-    if (font is num) {
-      setFontScale(snapFontLevel(font.toDouble()));
+    if (data['font_scale'] is num) {
+      writes['font_scale'] = snapFontLevel(
+        (data['font_scale'] as num).toDouble(),
+      );
     }
+    for (final key in ['red_letter_enabled', 'plan_enabled']) {
+      if (data[key] is bool) writes[key] = data[key] as bool;
+    }
+    if (data['tts_rate'] is num) {
+      writes['tts_rate'] = (data['tts_rate'] as num)
+          .clamp(0.25, 0.75)
+          .toDouble();
+    }
+    if (data['tts_pitch'] is num) {
+      writes['tts_pitch'] = (data['tts_pitch'] as num)
+          .clamp(0.5, 2.0)
+          .toDouble();
+    }
+    if (data['tts_voice'] is String) {
+      writes['tts_voice'] = data['tts_voice'] as String;
+    }
+    if (data['plan_daily_goal'] is num) {
+      writes['plan_daily_goal'] = (data['plan_daily_goal'] as num)
+          .toInt()
+          .clamp(1, 10);
+    }
+    for (final entry in writes.entries) {
+      if (!await _writePreference(entry.key, entry.value)) {
+        throw StateError('Não foi possível salvar ${entry.key}.');
+      }
+    }
+    await load();
+  }
 
-    final redLetter = data['red_letter_enabled'];
-    if (redLetter is bool) setRedLetterEnabled(redLetter);
-
-    final rate = data['tts_rate'];
-    if (rate is num) setTtsRate(rate.toDouble());
-    final pitch = data['tts_pitch'];
-    if (pitch is num) setTtsPitch(pitch.toDouble());
-    final voice = data['tts_voice'];
-    if (voice is String) setTtsVoice(voice);
-
-    final planOn = data['plan_enabled'];
-    if (planOn is bool) setPlanEnabled(planOn);
-    final goal = data['plan_daily_goal'];
-    if (goal is num) setDailyGoal(goal.toInt());
-
-    notifyListeners();
+  Future<bool> _writePreference(String key, Object value) {
+    if (value is String) return prefs.setString(key, value);
+    if (value is int) return prefs.setInt(key, value);
+    if (value is double) return prefs.setDouble(key, value);
+    if (value is bool) return prefs.setBool(key, value);
+    if (value is List<String>) return prefs.setStringList(key, value);
+    throw ArgumentError('Preferência inválida: $key');
   }
 }

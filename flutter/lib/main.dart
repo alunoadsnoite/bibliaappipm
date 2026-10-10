@@ -39,7 +39,10 @@ class _BibliaAppState extends State<BibliaApp> {
       listenable: AppState.i,
       builder: (context, _) {
         final t = themeForIndex(AppState.i.displayedThemeIndex, sys);
-        final brightness = resolveBrightness(AppState.i.displayedThemeIndex, sys);
+        final brightness = resolveBrightness(
+          AppState.i.displayedThemeIndex,
+          sys,
+        );
         return MaterialApp(
           title: kAppName,
           debugShowCheckedModeBanner: false,
@@ -52,8 +55,7 @@ class _BibliaAppState extends State<BibliaApp> {
               secondary: t.accent,
               brightness: brightness,
             ),
-            textSelectionTheme:
-                TextSelectionThemeData(cursorColor: t.accent),
+            textSelectionTheme: TextSelectionThemeData(cursorColor: t.accent),
           ),
           builder: (context, child) {
             // Multiplica o fator do aplicativo pelo ajuste de acessibilidade
@@ -62,8 +64,7 @@ class _BibliaAppState extends State<BibliaApp> {
             final sysFactor = sys.scale(16) / 16;
             return MediaQuery(
               data: MediaQuery.of(context).copyWith(
-                textScaler:
-                    TextScaler.linear(sysFactor * AppState.i.fontScale),
+                textScaler: TextScaler.linear(sysFactor * AppState.i.fontScale),
               ),
               child: child!,
             );
@@ -94,21 +95,47 @@ class _HomeShellState extends State<HomeShell> {
       builder: (context, _) {
         final t = themeForIndex(AppState.i.displayedThemeIndex, sys);
         return Scaffold(
-          body: IndexedStack(
-            index: _index,
-            // A lista NÃO pode ser `const`: widgets const são canonicados e o
-            // Flutter pula o `update()` deles (Element.updateChild compara
-            // `child.widget == newWidget`), então as abas nunca mais rodariam
-            // o `build()` e não repaintariam na troca de tema. É exatamente o
-            // bug que a v4.2.1 corrigiu e que voltou na v5.2.0.
-            // ignore: prefer_const_literals_to_create_immutables
+          body: Column(
             children: [
-              BibleTab(), // ignore: prefer_const_constructors
-              HymnsTab(), // ignore: prefer_const_constructors
-              SongsTab(), // ignore: prefer_const_constructors
-              LibraryTab(), // ignore: prefer_const_constructors
-              BoletimTab(), // ignore: prefer_const_constructors
-              SettingsTab(), // ignore: prefer_const_constructors
+              if (!AppState.i.storageAvailable ||
+                  AppState.i.loadErrors.isNotEmpty)
+                SafeArea(
+                  bottom: false,
+                  child: MaterialBanner(
+                    content: Text(
+                      !AppState.i.storageAvailable
+                          ? 'Armazenamento indisponível. As alterações desta sessão não serão salvas.'
+                          : 'Não foi possível carregar: ${AppState.i.loadErrors.join(', ')}.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () async {
+                          await AppState.i.load();
+                        },
+                        child: const Text('Tentar novamente'),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: IndexedStack(
+                  index: _index,
+                  // A lista NÃO pode ser `const`: widgets const são canonicados e o
+                  // Flutter pula o `update()` deles (Element.updateChild compara
+                  // `child.widget == newWidget`), então as abas nunca mais rodariam
+                  // o `build()` e não repaintariam na troca de tema. É exatamente o
+                  // bug que a v4.2.1 corrigiu e que voltou na v5.2.0.
+                  // ignore: prefer_const_literals_to_create_immutables
+                  children: [
+                    BibleTab(), // ignore: prefer_const_constructors
+                    HymnsTab(), // ignore: prefer_const_constructors
+                    SongsTab(), // ignore: prefer_const_constructors
+                    LibraryTab(), // ignore: prefer_const_constructors
+                    BoletimTab(), // ignore: prefer_const_constructors
+                    SettingsTab(), // ignore: prefer_const_constructors
+                  ],
+                ),
+              ),
             ],
           ),
           bottomNavigationBar: BottomNavigationBar(
@@ -122,17 +149,29 @@ class _HomeShellState extends State<HomeShell> {
             unselectedLabelStyle: const TextStyle(fontSize: 11),
             items: const [
               BottomNavigationBarItem(
-                  icon: Icon(Icons.menu_book), label: 'Bíblia'),
+                icon: Icon(Icons.menu_book),
+                label: 'Bíblia',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.library_music), label: 'Hinário'),
+                icon: Icon(Icons.library_music),
+                label: 'Hinário',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.music_note), label: 'Músicas'),
+                icon: Icon(Icons.music_note),
+                label: 'Músicas',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.local_library), label: 'Biblioteca'),
+                icon: Icon(Icons.local_library),
+                label: 'Biblioteca',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.calendar_month), label: 'Boletim'),
+                icon: Icon(Icons.calendar_month),
+                label: 'Boletim',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.settings), label: 'Config'),
+                icon: Icon(Icons.settings),
+                label: 'Config',
+              ),
             ],
           ),
         );

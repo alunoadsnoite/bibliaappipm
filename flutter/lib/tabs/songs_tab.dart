@@ -319,7 +319,7 @@ class _SongsTabState extends State<SongsTab> {
       final lyrics = lyricsCtrl.text.trim();
       if (title.isEmpty || lyrics.isEmpty) return;
       if (song == null) {
-        AppState.i.songs.add(Song(title, lyrics));
+        AppState.i.songs.add(Song.create(title, lyrics));
       } else {
         song.title = title;
         song.lyrics = lyrics;

@@ -2,7 +2,7 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **5.2.5**
+> Nome do projeto: **BibliaApp** · versão atual: **5.3.0**
 
 ## Funcionalidades
 
@@ -47,7 +47,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Ouvir o hino completo** por voz (em estrofes, com pausa/continuar/parar).
 
 ### 🎵 Músicas
-- **150 cânticos** do *Livro de Cânticos PG Micheline* já inclusos.
+- **152 cânticos** do *Livro de Cânticos PG Micheline* já inclusos.
 - Adicionar, editar e excluir letras de músicas próprias.
 - Compartilhar e destacar linhas.
 - **Ouvir a música completa** por voz (em estrofes, com pausa/continuar/parar).
@@ -75,8 +75,9 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Leitura por voz**: escolher a **voz** (padrão/feminina/masculina), a
   **velocidade** e o **tom** da leitura.
 - **Sobre o app**: logomarca, versão e links (Instagram, YouTube e e-mail).
-- **Backup**: exportar e importar todos os dados (destaques, notas, músicas,
-  boletim e progresso) em JSON.
+- **Backup**: compartilhar um arquivo JSON e importar pelo seletor de arquivos
+  ou colando o conteúdo. Validação antes da restauração e cópia local dos dados
+  anteriores; notas, destaques e progresso são mesclados.
 - Logomarca IPM, **Instagram** e **YouTube** da igreja.
 - **Dízimos e ofertas**: chave **Pix** da igreja para copiar/compartilhar, e
   contatos por e-mail e WhatsApp.
@@ -91,7 +92,8 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 
 - **Flutter / Dart** (SDK `^3.13.3`)
 - `shared_preferences` — persistência local
-- `share_plus` — compartilhamento de texto
+- `share_plus` — compartilhamento de texto e arquivos de backup
+- `file_selector` — importação de arquivos JSON
 - `flutter_tts` — leitura por voz (acessibilidade)
 - `url_launcher` — contatos (e-mail e WhatsApp)
 - Código 100% offline — todos os conteúdos são empacotados como assets do app

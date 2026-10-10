@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 class Book {
   final String abbr;
@@ -33,7 +34,9 @@ class Hymn {
     for (var v in verses) {
       final m = v as Map<String, dynamic>;
       names.add((m['name'] ?? '') as String);
-      stanzas.add((m['lines'] as List<dynamic>).map((e) => e as String).toList());
+      stanzas.add(
+        (m['lines'] as List<dynamic>).map((e) => e as String).toList(),
+      );
     }
     return Hymn(
       o['num'] as int,
@@ -59,12 +62,36 @@ class Song {
   String title;
   String lyrics;
 
-  Song(this.title, this.lyrics);
+  final String id;
 
-  factory Song.fromJson(Map<String, dynamic> o) =>
-      Song(o['title'] as String, (o['lyrics'] ?? '') as String);
+  Song(this.title, this.lyrics, {String? id})
+    : id = id ?? legacyId(title, lyrics);
 
-  Map<String, dynamic> toJson() => {'title': title, 'lyrics': lyrics};
+  factory Song.create(String title, String lyrics) {
+    final random = Random.secure();
+    final id = List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return Song(title, lyrics, id: id);
+  }
+
+  // Mantém os vínculos dos dados antigos; após criado, o ID não muda.
+  static String legacyId(String title, String lyrics) {
+    var hash = 0x811c9dc5;
+    for (final unit in '$title\u0000$lyrics'.codeUnits) {
+      hash = (((hash ^ unit) * 0x01000193) & 0xffffffff) & 0x7fffffff;
+    }
+    return hash.toRadixString(16);
+  }
+
+  factory Song.fromJson(Map<String, dynamic> o) => Song(
+    o['title'] as String,
+    (o['lyrics'] ?? '') as String,
+    id: o['id'] as String?,
+  );
+
+  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'lyrics': lyrics};
 }
 
 class Birthday {
@@ -88,33 +115,34 @@ class ChurchEvent {
   String time;
   String note;
 
-  ChurchEvent(this.title, this.day, this.month, this.year, this.time, this.note);
+  ChurchEvent(
+    this.title,
+    this.day,
+    this.month,
+    this.year,
+    this.time,
+    this.note,
+  );
 
   factory ChurchEvent.fromJson(Map<String, dynamic> o) => ChurchEvent(
-        o['title'] as String,
-        o['day'] as int,
-        o['month'] as int,
-        o['year'] as int,
-        (o['time'] ?? '') as String,
-        (o['note'] ?? '') as String,
-      );
+    o['title'] as String,
+    o['day'] as int,
+    o['month'] as int,
+    o['year'] as int,
+    (o['time'] ?? '') as String,
+    (o['note'] ?? '') as String,
+  );
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'year': year,
-        'month': month,
-        'day': day,
-        if (time.isNotEmpty) 'time': time,
-        if (note.isNotEmpty) 'note': note,
-      };
+    'title': title,
+    'year': year,
+    'month': month,
+    'day': day,
+    if (time.isNotEmpty) 'time': time,
+    if (note.isNotEmpty) 'note': note,
+  };
 
-  DateTime get dateTime => DateTime(
-        year,
-        month,
-        day,
-        _hour,
-        _minute,
-      );
+  DateTime get dateTime => DateTime(year, month, day, _hour, _minute);
 
   int get _hour {
     final h = time.split(':');
@@ -146,17 +174,10 @@ class RecentRef {
 
   RecentRef(this.version, this.book, this.chapter);
 
-  Map<String, dynamic> toJson() => {
-        'v': version,
-        'b': book,
-        'c': chapter,
-      };
+  Map<String, dynamic> toJson() => {'v': version, 'b': book, 'c': chapter};
 
-  factory RecentRef.fromJson(Map<String, dynamic> o) => RecentRef(
-        (o['v'] ?? '') as String,
-        o['b'] as int,
-        o['c'] as int,
-      );
+  factory RecentRef.fromJson(Map<String, dynamic> o) =>
+      RecentRef((o['v'] ?? '') as String, o['b'] as int, o['c'] as int);
 }
 
 /// Posição de leitura de uma versão (último livro/capítulo abertos).
@@ -181,13 +202,13 @@ class BibliotecaText {
   BibliotecaText(this.id, this.title, this.sub, this.items);
 
   factory BibliotecaText.fromJson(Map<String, dynamic> o) => BibliotecaText(
-        o['id'] as String,
-        o['title'] as String,
-        (o['sub'] ?? '') as String,
-        ((o['items'] as List<dynamic>?) ?? [])
-            .map((e) => BibliotecaItem.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    o['id'] as String,
+    o['title'] as String,
+    (o['sub'] ?? '') as String,
+    ((o['items'] as List<dynamic>?) ?? [])
+        .map((e) => BibliotecaItem.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 
   String searchText() {
     final sb = StringBuffer('$title $sub ');
@@ -208,7 +229,7 @@ class BibliotecaItem {
   BibliotecaItem(this.t, this.p);
 
   factory BibliotecaItem.fromJson(Map<String, dynamic> o) => BibliotecaItem(
-        (o['t'] ?? '') as String,
-        ((o['p'] as List<dynamic>?) ?? []).map((e) => e as String).toList(),
-      );
+    (o['t'] ?? '') as String,
+    ((o['p'] as List<dynamic>?) ?? []).map((e) => e as String).toList(),
+  );
 }

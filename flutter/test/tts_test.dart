@@ -163,10 +163,7 @@ void main() {
       // Pelo menos o último playChapter deve ter falado.
       expect(engine.spoken, isNotEmpty);
       // Os últimos itens devem ser do último playChapter.
-      expect(
-        engine.spoken.sublist(engine.spoken.length - 1),
-        ['depois'],
-      );
+      expect(engine.spoken.sublist(engine.spoken.length - 1), ['depois']);
     });
 
     test('playChapter interrompe DE VERDADE a reprodução anterior', () async {
@@ -202,8 +199,11 @@ void main() {
       expect(svc.cancel, isTrue);
       await f;
       await Future<void>.delayed(const Duration(milliseconds: 20));
-      expect(engine.spoken, isEmpty,
-          reason: 'nada deve ser falado depois da pausa');
+      expect(
+        engine.spoken,
+        isEmpty,
+        reason: 'nada deve ser falado depois da pausa',
+      );
     });
 
     test('resume não recomeça um versículo único do zero', () async {
@@ -348,15 +348,31 @@ void main() {
       expect(engine.pitches, [0.8]); // grave (masculina)
     });
 
-    test('com voz instalada, usa a voz real e mantém o tom do usuário',
-        () async {
-      AppState.i.ttsPitch = 1.2;
-      AppState.i.ttsVoice = 'female';
+    test(
+      'com voz instalada, usa a voz real e mantém o tom do usuário',
+      () async {
+        AppState.i.ttsPitch = 1.2;
+        AppState.i.ttsVoice = 'female';
+        final engine = FakeTtsEngine();
+        final svc = TtsService.createForTest(fake: engine);
+        await svc.speakOne('teste');
+        expect(engine.selectedVoiceName, 'pt-BR-female');
+        expect(engine.pitches, [1.2]);
+      },
+    );
+
+    test('restaura voz padrão após vozes feminina e masculina', () async {
       final engine = FakeTtsEngine();
       final svc = TtsService.createForTest(fake: engine);
+      for (final voice in ['female', 'male']) {
+        AppState.i.ttsVoice = voice;
+        await svc.speakOne('teste');
+        expect(engine.selectedVoiceName, 'pt-BR-$voice');
+      }
+      AppState.i.ttsVoice = 'default';
       await svc.speakOne('teste');
-      expect(engine.selectedVoiceName, 'pt-BR-female');
-      expect(engine.pitches, [1.2]);
+      expect(engine.selectedVoiceName, isNull);
+      expect(engine.languagesSet.last, 'pt-BR');
     });
 
     test('não reaplica a voz enquanto a preferência não muda', () async {

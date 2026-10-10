@@ -28,15 +28,13 @@ void main() {
 
   /// O rótulo que indica o nível atual (texto em cor de destaque acima do slider).
   Finder currentLevelLabel(String name) => find.byWidgetPredicate((w) {
-        return w is Text &&
-            w.data == name &&
-            w.style?.color ==
-                kThemes[AppState.i.themeIndex].accent &&
-            w.style?.fontSize == 14;
-      });
+    return w is Text &&
+        w.data == name &&
+        w.style?.color == kThemes[AppState.i.themeIndex].accent &&
+        w.style?.fontSize == 14;
+  });
 
-  testWidgets('seleção de tema mostra o check e aplica a cor',
-      (tester) async {
+  testWidgets('seleção de tema mostra o check e aplica a cor', (tester) async {
     await openConfig(tester);
 
     expect(AppState.i.themeIndex, 0);
@@ -50,14 +48,12 @@ void main() {
     expect(checkInThemeRow('Marrom'), findsOneWidget);
     expect(checkInThemeRow('Claro'), findsNothing);
     expect(
-      find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == kMarrom.bg),
+      find.byWidgetPredicate((w) => w is ColoredBox && w.color == kMarrom.bg),
       findsWidgets,
     );
   });
 
-  testWidgets('tema Verde aplica a paleta verde e branco',
-      (tester) async {
+  testWidgets('tema Verde aplica a paleta verde e branco', (tester) async {
     await openConfig(tester);
 
     expect(find.text('Verde'), findsOneWidget);
@@ -68,14 +64,14 @@ void main() {
     expect(AppState.i.themeIndex, 3);
     expect(checkInThemeRow('Verde'), findsOneWidget);
     expect(
-      find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == kVerde.bg),
+      find.byWidgetPredicate((w) => w is ColoredBox && w.color == kVerde.bg),
       findsWidgets,
     );
   });
 
-  testWidgets('slider de tamanho da letra muda a escala e o rótulo',
-      (tester) async {
+  testWidgets('slider de tamanho da letra muda a escala e o rótulo', (
+    tester,
+  ) async {
     await openConfig(tester);
 
     expect(AppState.i.fontScale, 1.0);
@@ -94,8 +90,10 @@ void main() {
     expect(AppState.i.redLetterEnabled, isFalse);
 
     await openConfig(tester);
-    final toggle = find.widgetWithText(SwitchListTile,
-        'Falas de Jesus e Deus em vermelho');
+    final toggle = find.widgetWithText(
+      SwitchListTile,
+      'Falas de Jesus e Deus em vermelho',
+    );
     await tester.drag(find.byType(ListView), const Offset(0, -400));
     await tester.pumpAndSettle();
     expect(toggle, findsOneWidget);
@@ -106,8 +104,17 @@ void main() {
     expect(AppState.i.prefs.getBool('red_letter_enabled'), isTrue);
   });
 
-  testWidgets('todos os temas renderizam a HomeShell sem erro',
-      (tester) async {
+  testWidgets('falhas de conteúdo são visíveis e oferecem nova tentativa', (
+    tester,
+  ) async {
+    AppState.i.loadErrors.add('hinário');
+    await tester.pumpWidget(const BibliaApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Não foi possível carregar: hinário.'), findsOneWidget);
+    expect(find.text('Tentar novamente'), findsOneWidget);
+  });
+
+  testWidgets('todos os temas renderizam a HomeShell sem erro', (tester) async {
     for (var i = 0; i < kThemes.length; i++) {
       AppState.i.setTheme(i);
       await tester.pumpWidget(const BibliaApp());
