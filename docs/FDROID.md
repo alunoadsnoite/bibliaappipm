@@ -16,6 +16,8 @@ Estado: preparação em andamento; o aplicativo ainda não foi submetido nem pub
 
 É necessário documentar a origem, a licença e a autorização de redistribuição de cada tradução bíblica (JFAA, ARA, NVI, NTLH e BKJ), do Hinário Novo Cântico, das músicas, das traduções dos documentos e da logomarca. Não presumir que esses materiais estão cobertos pela licença MIT.
 
+As declarações do desenvolvedor e as pendências por material estão em [CONTENT_LICENSES.md](CONTENT_LICENSES.md).
+
 A política do F-Droid exige licenças legais válidas ou domínio público para todos os assets. A documentação de direitos deve ser incluída no repositório antes da solicitação de inclusão.
 
 ## Compilação
