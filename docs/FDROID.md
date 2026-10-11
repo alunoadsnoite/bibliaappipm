@@ -22,6 +22,12 @@ A política do F-Droid exige licenças legais válidas ou domínio público para
 
 ## Compilação
 
+Em 11/10/2026, foi conferido o relatório automático do F-Droid Bot na
+[solicitação #4547](https://gitlab.com/fdroid/rfp/-/work_items/4547#note_3991187767).
+O alerta de ausência de `distributionSha256Sum` foi corrigido no Gradle Wrapper
+Flutter com o checksum oficial da distribuição Gradle 9.3.1. A solicitação
+continua aberta; ainda não há resposta de um mantenedor sobre as licenças.
+
 ```sh
 cd flutter
 flutter pub get --enforce-lockfile
