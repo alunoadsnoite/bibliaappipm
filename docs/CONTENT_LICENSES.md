@@ -59,3 +59,12 @@ Todos os cinco arquivos têm 66 livros e 1.189 capítulos. As contagens abaixo m
 ### Situação para a avaliação
 
 Mantidos todos os assets a pedido do desenvolvedor. A investigação não comprovou licença livre abrangente da IPB para os textos incluídos e não comprova titularidade pessoal sobre as traduções atribuídas publicamente a outras editoras. A declaração de autoria e autorização do desenvolvedor aplica-se aos materiais sobre os quais ele efetivamente detenha os direitos; não foi escolhido um texto de licença em seu nome. O pedido preliminar do F-Droid continua dependente da avaliação dos mantenedores e da documentação dessas permissões. Este registro reúne evidências técnicas e editoriais, sem emitir parecer jurídico.
+
+## Complemento da investigação — 11/10/2026
+
+- **Hinário:** a ata oficial CE-SC/IPB 2018, DOC. LIII, orienta o CHHM a resolver a questão submetida junto aos detentores dos direitos autorais. Isso não constitui licença geral para redistribuir o hinário; reforça que a relação institucional com a IPB, isoladamente, não documenta todas as permissões.
+  - https://www.executivaipb.com.br/Atas_CE_SC/CE/Ata_CE_2018.pdf (páginas 34–35 do PDF)
+- **BKJ:** a amostra editorial da Bíblia Jeffrey BKJ 1611, disponibilizada em seu site, identifica copyright da BV Films/BV Books. Na página impressa de créditos, a permissão geral de citação é limitada a um capítulo, 500 versículos e proporção do texto da obra; outros usos exigem permissão escrita. Esses termos pertencem à edição consultada, não comprovam qual edição originou o JSON do aplicativo, mas impedem interpretar a permissão genérica de citação do FAQ como licença irrestrita do texto completo.
+  - https://bibliajeffrey.com.br/wp-content/uploads/2020/11/Livreto_Jeffrey.pdf (página 5 do PDF)
+
+Não foram enviadas mensagens às editoras ou à IPB. A avaliação solicitada ao F-Droid permanece preliminar; não foi declarado cumprimento integral das condições de inclusão.
