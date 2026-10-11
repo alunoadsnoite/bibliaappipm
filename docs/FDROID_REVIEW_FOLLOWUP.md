@@ -1,6 +1,6 @@
 # Atualização preparada para o pedido F-Droid #4547
 
-Estado: texto preparado em 11/10/2026; ainda não enviado. A sessão do GitLab precisa estar autenticada para comentar na solicitação existente. Não criar outro pedido.
+Estado: comentário publicado e confirmado em 11/10/2026 na solicitação existente. Link: https://gitlab.com/fdroid/rfp/-/work_items/4547#note_3992438672. O pedido permanece aberto, sem aprovação de inclusão.
 
 Destino: https://gitlab.com/fdroid/rfp/-/work_items/4547
 
