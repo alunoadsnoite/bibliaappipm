@@ -10,8 +10,8 @@ void main() {
     await AppState.i.load();
   });
 
-  test('hinário novo cântico completo', () {
-    expect(AppState.i.hymns.length, 405);
+  test('hinário Salmos e Hinos (1880) completo', () {
+    expect(AppState.i.hymns.length, 287);
   });
 
   test('todos os hinos têm título e ao menos uma linha', () {
@@ -35,11 +35,10 @@ void main() {
     }
   });
 
-  test('hino 1 completo (Doxologia)', () {
+  test('hino 1 completo (Salmo I)', () {
     final h = AppState.i.hymns.first;
     expect(h.num, 1);
-    expect(h.title, 'Doxologia');
-    expect(h.stanzas.first, contains('Justo é o Senhor em seus santos caminhos,'));
-    expect(h.stanzas.first, contains('Em verdade. Aleluia! Aleluia!'));
+    expect(h.title, 'Psalmo I');
+    expect(h.stanzas.first, contains('Quão bem aventurado'));
   });
 }

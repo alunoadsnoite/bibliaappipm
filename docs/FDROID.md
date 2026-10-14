@@ -1,24 +1,28 @@
 # Inclusão no catálogo oficial do F-Droid
 
-Estado: solicitação de avaliação preliminar publicada em 10/10/2026 e aberta em https://gitlab.com/fdroid/rfp/-/work_items/4547. A pendência das licenças foi explicitamente informada. O aplicativo ainda não foi aprovado nem publicado no catálogo oficial.
+Estado: solicitação de avaliação preliminar publicada em 10/10/2026 e aberta em https://gitlab.com/fdroid/rfp/-/work_items/4547. A pendência das licenças **foi resolvida** nesta versão: todo o conteúdo empacotado passou a ser de domínio público ou de licença livre. O aplicativo ainda não foi aprovado nem publicado no catálogo oficial.
 
 ## Código e versão
 
 - Repositório: https://github.com/alunoadsnoite/bibliaappipm
 - Código principal: `flutter/` (a aplicação Java na raiz é legada).
 - Application ID: `br.com.valdenor.bibliaapp`.
-- Versão: `5.4.0`, versionCode `32`, tag publicada `v5.4.0`.
-- Licença do código: MIT. A licença não cobre os conteúdos dos assets.
+- Versão: `5.5.0`, versionCode `33`.
+- Licença do código: MIT. A licença não cobre os conteúdos dos assets, que têm licenças próprias livres.
 - Flutter usado na validação local: commit `abaf9c523780a608bd46686fd5e53740a07077f8`.
 - Descrições, ícone e changelog: `fastlane/metadata/android/` em português e inglês.
 
-## Pendência de conteúdo
+## Conteúdo (resolvido)
 
-É necessário documentar a origem, a licença e a autorização de redistribuição de cada tradução bíblica (JFAA, ARA, NVI, NTLH e BKJ), do Hinário Novo Cântico, das músicas, das traduções dos documentos e da logomarca. Não presumir que esses materiais estão cobertos pela licença MIT.
+Os conteúdos protegidos foram substituídos por equivalentes livres/domínio público:
 
-As declarações do desenvolvedor e as pendências por material estão em [CONTENT_LICENSES.md](CONTENT_LICENSES.md).
+- Bíblia: **Bíblia Livre** (CC BY 4.0 BR), **Bíblia Portuguesa Mundial** (domínio público), **JFAAL** (MIT) e **Almeida 1911** (domínio público), no lugar de ARA, NVI, NTLH, BKJ e JFAA.
+- Hinário: **Salmos e Hinos** (edição de 1880, domínio público), no lugar do Novo Cântico.
+- Cancioneiro empacotado: removido (as letras ficam a cargo do usuário).
+- Biblioteca: documentos clássicos em domínio público; as citações dos Dez Mandamentos e da Oração Dominical passaram a usar a BPM.
+- App Java legado: alinhado ao mesmo conteúdo livre.
 
-A política do F-Droid exige licenças legais válidas ou domínio público para todos os assets. A documentação de direitos deve ser incluída no repositório antes da solicitação de inclusão.
+A origem e as licenças de cada conteúdo estão em [CONTENT_LICENSES.md](CONTENT_LICENSES.md). A política do F-Droid exige licenças válidas ou domínio público para todos os assets; esse requisito está atendido.
 
 ## Compilação
 

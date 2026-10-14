@@ -23,4 +23,6 @@ SOFTWARE.
 ---
 
 Obs.: os textos bíblicos, hinários e demais conteúdos empacotados como assets
-possuem direitos autorais próprios e não fazem parte da licença MIT acima.
+possuem licenças próprias (domínio público ou licenças livres) e não fazem
+parte da licença MIT acima. A origem e a licença de cada conteúdo estão em
+`docs/CONTENT_LICENSES.md`.

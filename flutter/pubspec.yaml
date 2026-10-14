@@ -2,7 +2,7 @@ name: biblia_app
 description: "Bíblia & Hinário - leitura da Bíblia, hinário, músicas e boletim da igreja."
 publish_to: 'none'
 
-version: 5.4.0+32
+version: 5.5.0+33
 
 environment:
   sdk: ^3.13.3
@@ -32,14 +32,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/biblia.json
-    - assets/biblia_ara.json
-    - assets/biblia_nvi.json
-    - assets/biblia_ntlh.json
-    - assets/biblia_bkj.json
+    - assets/biblia_blivre.json
+    - assets/biblia_bpm.json
+    - assets/biblia_jfaal.json
+    - assets/biblia_1911.json
     - assets/redletter.json
     - assets/hinos.json
-    - assets/musicas.json
     - assets/boletim.json
     - assets/biblioteca.json
     - assets/logo_ipm.png

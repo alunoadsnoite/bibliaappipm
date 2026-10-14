@@ -197,7 +197,7 @@ void main() {
           .setMockMethodCallHandler(
               const MethodChannel('br.com.valdenor.bibliaapp/widget'), null));
 
-      await AppState.i.setVersion('nvi');
+      await AppState.i.setVersion('bpm');
       final nvi = AppState.i.bible;
       final (b, c, v) = dailyVerseFor(DateTime.now());
       expect(texts.last, nvi[b].chapters[c][v]);
@@ -215,9 +215,9 @@ void main() {
 
     test('posições ficam por versão', () async {
       await AppState.i.savePosition(1, 2);
-      final p = AppState.i.positionOf('ara');
+      final p = AppState.i.positionOf('blivre');
       expect(p!.book, 1);
-      expect(AppState.i.positionOf('nvi'), isNull);
+      expect(AppState.i.positionOf('bpm'), isNull);
     });
   });
 
@@ -386,11 +386,11 @@ void main() {
   });
 
   group('comparação de traduções', () {
-    test('retorna o mesmo versículo nas 5 versões', () async {
+    test('retorna o mesmo versículo em todas as versões livres', () async {
       final rows = await AppState.i.comparedVerses(42, 2, 15);
-      expect(rows.length, 5);
+      expect(rows.length, 4);
       expect(rows.map((r) => r.$1).toList(),
-          ['ARA', 'NVI', 'NTLH', 'JFAA', 'BKJ']);
+          ['BLIVRE', 'BPM', 'JFAAL', 'ALM1911']);
       for (final (_, text) in rows) {
         expect(text.trim(), isNotEmpty);
       }

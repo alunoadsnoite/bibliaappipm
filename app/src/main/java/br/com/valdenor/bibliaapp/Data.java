@@ -123,16 +123,16 @@ public class Data {
     public static volatile List<Song> songs = new ArrayList<>();
     public static volatile List<Birthday> birthdays = new ArrayList<>();
     public static volatile List<Event> events = new ArrayList<>();
-    public static String selectedVersion = "ara";
+    public static String selectedVersion = "blivre";
 
-    public static final String[] VERSION_ORDER = {"ara", "nvi", "ntlh", "jfaal"};
+    public static final String[] VERSION_ORDER = {"blivre", "bpm", "jfaal", "1911"};
     public static final String[] VERSION_NAMES = {
-            "Almeida Revista e Atualizada",
-            "Nova Versão Internacional",
-            "Nova Tradução na Linguagem de Hoje",
-            "João Ferreira de Almeida Atualizada Livre"
+            "Bíblia Livre",
+            "Bíblia Portuguesa Mundial",
+            "João Ferreira de Almeida Atualizada Livre",
+            "Almeida 1911"
     };
-    public static final String[] VERSION_ABBRS = {"ARA", "NVI", "NTLH", "JFAA"};
+    public static final String[] VERSION_ABBRS = {"BLIVRE", "BPM", "JFAAL", "ALM1911"};
 
     private static final String KEY_VERSION = "biblia_version";
     private static volatile boolean loaded = false;
@@ -141,12 +141,12 @@ public class Data {
         if (loaded) return;
         bibles.clear();
         try {
-            List<Book> jfaal = loadBible(ctx, "biblia.json");
+            List<Book> jfaal = loadBible(ctx, "biblia_jfaal.json");
             bibles.put("jfaal", jfaal);
-            bibles.put("ara", loadBible(ctx, "biblia_ara.json"));
-            bibles.put("nvi", loadBible(ctx, "biblia_nvi.json"));
-            bibles.put("ntlh", loadBible(ctx, "biblia_ntlh.json"));
-            selectedVersion = ctx.getSharedPreferences(Ui.PREF_THEME, 0).getString(KEY_VERSION, "ara");
+            bibles.put("blivre", loadBible(ctx, "biblia_blivre.json"));
+            bibles.put("bpm", loadBible(ctx, "biblia_bpm.json"));
+            bibles.put("1911", loadBible(ctx, "biblia_1911.json"));
+            selectedVersion = ctx.getSharedPreferences(Ui.PREF_THEME, 0).getString(KEY_VERSION, "blivre");
             List<Book> cur = bibles.get(selectedVersion);
             bible = cur != null ? cur : jfaal;
             JSONArray ha = new JSONArray(readAsset(ctx, "hinos.json"));

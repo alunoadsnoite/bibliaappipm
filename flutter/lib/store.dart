@@ -11,28 +11,28 @@ import 'daily.dart';
 import 'models.dart';
 import 'theme.dart';
 
-const List<String> kVersionOrder = ['ara', 'nvi', 'ntlh', 'jfaal', 'bkj'];
+/// Ordem das traduções exibidas no app. Todas são de uso livre: a licença de
+/// cada texto está registrada em `docs/CONTENT_LICENSES.md`.
+const List<String> kVersionOrder = ['blivre', 'bpm', 'jfaal', '1911'];
 const List<String> kVersionNames = [
-  'Almeida Revista e Atualizada',
-  'Nova Versão Internacional',
-  'Nova Tradução na Linguagem de Hoje',
+  'Bíblia Livre',
+  'Bíblia Portuguesa Mundial',
   'João Ferreira de Almeida Atualizada Livre',
-  'Bíblia King James Fiel 1611',
+  'Almeida 1911',
 ];
-const List<String> kVersionAbbrs = ['ARA', 'NVI', 'NTLH', 'JFAA', 'BKJ'];
+const List<String> kVersionAbbrs = ['BLIVRE', 'BPM', 'JFAAL', 'ALM1911'];
 const Map<String, String> kVersionAssets = {
-  'ara': 'assets/biblia_ara.json',
-  'nvi': 'assets/biblia_nvi.json',
-  'ntlh': 'assets/biblia_ntlh.json',
-  'jfaal': 'assets/biblia.json',
-  'bkj': 'assets/biblia_bkj.json',
+  'blivre': 'assets/biblia_blivre.json',
+  'bpm': 'assets/biblia_bpm.json',
+  'jfaal': 'assets/biblia_jfaal.json',
+  '1911': 'assets/biblia_1911.json',
 };
 
 const String kAppName = 'Bíblia IPM';
 
 /// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
 /// pelo valor real do pacote via [PackageInfo].
-const String kAppVersion = '5.4.0';
+const String kAppVersion = '5.5.0';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;
@@ -100,7 +100,7 @@ class AppState extends ChangeNotifier {
 
   int themeIndex = 0;
   double fontScale = 1.0;
-  String version = 'ara';
+  String version = 'blivre';
   bool loaded = false;
 
   /// Brilho atual do aparelho (claro/escuro), usado pelo tema Sistema.
@@ -153,8 +153,8 @@ class AppState extends ChangeNotifier {
         prefs.getInt('theme') ?? ((prefs.getBool('night') ?? false) ? 1 : 0);
     if (themeIndex < 0 || themeIndex >= kThemeNames.length) themeIndex = 0;
     fontScale = snapFontLevel(prefs.getDouble('font_scale') ?? 1.0);
-    version = prefs.getString('biblia_version') ?? 'ara';
-    if (!kVersionOrder.contains(version)) version = 'ara';
+    version = prefs.getString('biblia_version') ?? 'blivre';
+    if (!kVersionOrder.contains(version)) version = 'blivre';
     redLetterEnabled = prefs.getBool('red_letter_enabled') ?? false;
 
     await _optional('letras vermelhas', _loadRedLetter);
@@ -482,9 +482,9 @@ class AppState extends ChangeNotifier {
   Future<List<Book>> _doEnsureBible(String code) async {
     final asset = kVersionAssets[code];
     if (asset == null) {
-      // Código desconhecido: cai na tradução padrão (jfaal), que passa pela
+      // Código desconhecido: cai na tradução padrão (blivre), que passa pela
       // mesma via de cache acima — o resultado fica gravado em `_bibleCache`.
-      return _ensureBible('jfaal');
+      return _ensureBible('blivre');
     }
     final books = await _loadBible(asset);
     _bibleCache[code] = books;
@@ -537,15 +537,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _loadSongs() async {
-    try {
-      final stored = prefs.getString('songs_json');
-      final text = stored ?? await rootBundle.loadString('assets/musicas.json');
-      final arr = jsonDecode(text) as List<dynamic>;
-      songs = arr.map((e) => Song.fromJson(e as Map<String, dynamic>)).toList();
-    } catch (_) {
+    final stored = prefs.getString('songs_json');
+    if (stored == null || stored.trim().isEmpty) {
       songs = [];
-      rethrow;
+      return;
     }
+    final arr = jsonDecode(stored) as List<dynamic>;
+    songs = arr.map((e) => Song.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> _loadBoletim() async {

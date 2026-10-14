@@ -2,18 +2,17 @@
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
 
-> Nome do projeto: **BibliaApp** · versão atual: **5.4.0**
+> Nome do projeto: **BibliaApp** · versão atual: **5.5.0**
 
 ## Funcionalidades
 
 ### 📖 Bíblia
 - Leitura completa dos 66 livros, offline, com capítulos e versículos.
-- **5 traduções** disponíveis:
-  - **JFAA** — João Ferreira de Almeida Atualizada Livre
-  - **ARA** — Almeida Revista e Atualizada
-  - **NVI** — Nova Versão Internacional
-  - **NTLH** — Nova Tradução na Linguagem de Hoje
-  - **BKJ** — Bíblia King James Fiel 1611 (nova versão, na 4.7)
+- **4 traduções livres** disponíveis (domínio público ou licença livre):
+  - **BLIVRE** — Bíblia Livre (CC BY 4.0 BR)
+  - **BPM** — Bíblia Portuguesa Mundial (domínio público)
+  - **JFAAL** — João Ferreira de Almeida Atualizada Livre (MIT)
+  - **ALM1911** — Almeida 1911 (domínio público)
 - Livros organizados por grandes grupos literários (Pentateuco, Históricos,
   Poéticos, Sapenciais, Proféticos Maiores/Menores, Evangelhos, Atos, Cartas
   Paulinas, Cartas Gerais e Revelação), dentro de Antigo e Novo Testamento.
@@ -47,12 +46,11 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
   (aguda/grave) — o recurso funciona **mesmo fora do ar**.
 
 ### 🎶 Hinário
-- Hinário **Novo Cântico** completo (405 hinos) com busca por título, autor ou letra.
+- Hinário **Salmos e Hinos** (edição de 1880, domínio público), com 287 hinos.
 - Coros, pontes e prelúdios identificados.
 - **Ouvir o hino completo** por voz (em estrofes, com pausa/continuar/parar).
 
 ### 🎵 Músicas
-- **152 cânticos** do *Livro de Cânticos PG Micheline* já inclusos.
 - Adicionar, editar e excluir letras de músicas próprias.
 - Compartilhar e destacar linhas.
 - **Ouvir a música completa** por voz (em estrofes, com pausa/continuar/parar).
@@ -62,7 +60,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Catecismo Maior de Westminster** (196 perguntas, texto completo).
 - **Catecismo Menor de Westminster** (107 perguntas).
 - **Credo Apostólico** e **Credo Niceno**.
-- **Os Dez Mandamentos** (Êxodo 20, ARA).
+- **Os Dez Mandamentos** (Êxodo 20, BPM).
 - **Os Cinco Pontos do Calvinismo** (as doutrinas da graça).
 - **As 95 Teses de Lutero** (1517).
 - Busca por documento e **leitura por voz** do texto completo.
@@ -123,7 +121,7 @@ BibliaApp/
 │   │   ├── theme.dart # Temas e níveis de fonte
 │   │   ├── common.dart # Destaques, copiar e compartilhar
 │   │   └── tabs/      # Abas: Bíblia, Hinário, Músicas, Biblioteca, Boletim, Config
-│   ├── assets/        # Bíblias (5 traduções), hinos, músicas, biblioteca e boletim
+│   ├── assets/        # Bíblias (4 traduções livres), hinos, biblioteca e boletim
 │   ├── android/       # Projeto Android
 │   ├── ios/           # Projeto iOS
 │   └── test/          # Testes unitários e de widget
@@ -179,6 +177,7 @@ Nas instalações novas, e em uma única execução, o aplicativo lê os dados d
 
 | Versão | Descrição |
 | ------ | --------- |
+| 5.5.0 | **Conteúdo 100% livre**: substituição das traduções bíblicas não-livres (ARA, NVI, NTLH, BKJ, JFAA) pelas livres **Bíblia Livre**, **Bíblia Portuguesa Mundial**, **JFAAL** e **Almeida 1911**; hinário **Salmos e Hinos** (edição de 1880, domínio público) no lugar do Novo Cântico; remoção do cancioneiro empacotado; **Dez Mandamentos** e **Oração Dominical** na Biblioteca passam a usar a BPM. Preparação para inclusão no F-Droid |
 | 5.4.0 | Central de notas e destaques, favoritos, busca unificada, plano com prazo, conclusão explícita de capítulos, boletim compartilhável, navegação adaptativa e lembretes locais opcionais |
 | 4.0 | App nativo Android |
 | 4.2 | Rewrite em Flutter (Android + iOS) com a marca **Bíblia IPM** |

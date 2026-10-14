@@ -275,10 +275,10 @@ void main() {
 
     test('posições ficam por versão e são cached', () async {
       await AppState.i.savePosition(3, 5);
-      expect(AppState.i.positionOf('ara')!.book, 3);
-      expect(AppState.i.positionOf('nvi'), isNull);
+      expect(AppState.i.positionOf('blivre')!.book, 3);
+      expect(AppState.i.positionOf('bpm'), isNull);
       // Segunda leitura usa o cache (mesmo valor, sem decodificar de novo).
-      expect(AppState.i.positionOf('ara')!.chapter, 5);
+      expect(AppState.i.positionOf('blivre')!.chapter, 5);
     });
 
     test('importar posições limpa o cache em memória', () async {
@@ -286,9 +286,9 @@ void main() {
       final json = AppState.i.buildExportJson();
       final data = jsonDecode(json) as Map<String, dynamic>;
       data['positions'] = {
-        'ara': {'b': 9, 'c': 3},
+        'blivre': {'b': 9, 'c': 3},
       };
-      data['version'] = 'ara';
+      data['version'] = 'blivre';
       await AppState.i.importFromJson(jsonEncode(data));
       expect(AppState.i.lastPosition!.book, 9);
     });
