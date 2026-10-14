@@ -1,31 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../common.dart';
 import '../data_files.dart';
 import '../reminder_settings.dart';
 import '../store.dart';
 import '../theme.dart';
-
-const String kContactEmail = 'valdenorsa@proton.me';
-const String kContactWhatsapp = '+55 81 98835-3131';
-const String kContactWhatsappLink = 'https://wa.me/5581988353131';
-const String kInstagramLink = 'https://www.instagram.com/ipmadalena/';
-const String kInstagramHandle = '@ipmadalena';
-const String kYoutubeLink = 'https://www.youtube.com/@IPMadalena';
-const String kYoutubeHandle = 'IP Madalena';
-const String kPixKey = '09.829.847/0001-58';
-const String kPixBeneficiario = 'IP Madalena';
-
-Future<void> _openEmail() async {
-  await launchUrl(Uri(scheme: 'mailto', path: kContactEmail));
-}
-
-Future<void> _openWhatsapp() async {
-  await launchUrl(Uri.parse(kContactWhatsappLink));
-}
 
 class SettingsTab extends StatelessWidget {
   const SettingsTab({super.key});
@@ -165,8 +146,6 @@ class SettingsTab extends StatelessWidget {
               onTap: () => _aboutDialog(context),
             ),
             const SizedBox(height: 20),
-            _pixSection(context),
-            _contactSection(context),
             const SizedBox(height: 20),
             Text(
               'Seus destaques e músicas são mantidos entre as versões.',
@@ -175,204 +154,6 @@ class SettingsTab extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Future<void> _openInstagram() async {
-    await launchUrl(Uri.parse(kInstagramLink));
-  }
-
-  Future<void> _openYoutube() async {
-    await launchUrl(Uri.parse(kYoutubeLink));
-  }
-
-  Widget _pixSection(BuildContext context) {
-    final t = appTheme;
-    final messenger = ScaffoldMessenger.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Dízimos e ofertas',
-          style: TextStyle(
-            color: t.text,
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Material(
-          color: t.card,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00A550),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.qr_code_2,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Contribua pela chave Pix (CNPJ), com sua oferta e '
-                        'dízimo, e ajude a obra do Senhor.',
-                        style: TextStyle(
-                          color: t.muted,
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: t.light,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    kPixKey,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: t.text,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Beneficiário: $kPixBeneficiario',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: t.muted, fontSize: 12),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () async {
-                        await copyText(kPixKey);
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Chave Pix copiada.',
-                              style: TextStyle(color: t.text),
-                            ),
-                            backgroundColor: t.card,
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.copy, size: 18),
-                      label: const Text('Copiar chave'),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: () => shareText(
-                        'Dízimos e ofertas — $kPixBeneficiario\n'
-                        'Chave Pix (CNPJ): $kPixKey',
-                      ),
-                      icon: const Icon(Icons.share, size: 18),
-                      label: const Text('Compartilhar'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _contactSection(BuildContext context) {
-    final t = appTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: t.card,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Image.asset(
-              'assets/logo_ipm.png',
-              width: 220,
-              height: 140,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Contato',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: t.text,
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          kAppName,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: t.muted, fontSize: 12),
-        ),
-        const SizedBox(height: 8),
-        _contactTile(
-          icon: Icons.email,
-          title: kContactEmail,
-          subtitle: 'Enviar e-mail',
-          onTap: _openEmail,
-        ),
-        const SizedBox(height: 8),
-        _contactTile(
-          icon: Icons.chat,
-          title: kContactWhatsapp,
-          subtitle: 'Conversar no WhatsApp',
-          onTap: _openWhatsapp,
-        ),
-        const SizedBox(height: 8),
-        _contactTile(
-          icon: Icons.camera_alt,
-          title: kInstagramHandle,
-          subtitle: 'Seguir no Instagram',
-          onTap: _openInstagram,
-        ),
-        const SizedBox(height: 8),
-        _contactTile(
-          icon: Icons.play_circle_fill,
-          title: kYoutubeHandle,
-          subtitle: 'Assistir no YouTube',
-          onTap: _openYoutube,
-        ),
-      ],
     );
   }
 
@@ -458,30 +239,6 @@ class SettingsTab extends StatelessWidget {
                 style: TextStyle(color: t.text, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 14),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  TextButton.icon(
-                    onPressed: _openInstagram,
-                    icon: const Icon(Icons.camera_alt, size: 18),
-                    label: const Text('Instagram'),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: _openYoutube,
-                    icon: const Icon(Icons.play_circle_fill, size: 18),
-                    label: const Text('YouTube'),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: _openEmail,
-                    icon: const Icon(Icons.email, size: 18),
-                    label: const Text('E-mail'),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

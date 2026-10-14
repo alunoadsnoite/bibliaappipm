@@ -43,13 +43,7 @@ workflows:
     artifacts:
       - flutter/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      email:
-        recipients:
-          - valdenorsa@proton.me
-        notify:
-          success: true
-          failure: true
+
 
   android:
     name: Android
@@ -84,10 +78,3 @@ workflows:
     artifacts:
       - flutter/build/app/outputs/flutter-apk/*.apk
       - flutter/build/app/outputs/bundle/release/*.aab
-    publishing:
-      email:
-        recipients:
-          - valdenorsa@proton.me
-        notify:
-          success: true
-          failure: true

@@ -1,9 +1,9 @@
 # Licenças dos conteúdos empacotados
 
-Todos os conteúdos empacotados nos assets do aplicativo são de **domínio
-público** ou possuem **licença livre** compatível com a política de inclusão do
-F-Droid. Nenhum texto protegido por direitos autorais de terceiros é
-redistribuído.
+Este inventário descreve a etapa intermediária 5.5.0. A conformidade integral
+não foi comprovada: obras originais antigas não estabelecem a licença de suas
+traduções modernas. Os documentos foram removidos da edição independente
+[Bíblia Livre IPM](https://github.com/alunoadsnoite/biblia-livre-ipm).
 
 A licença MIT do código não se aplica aos textos, que mantêm suas próprias
 licenças (abaixo).
@@ -15,7 +15,7 @@ Quatro traduções livres, no formato `[{abbr,name,chapters}]` com 66 livros e
 
 | Asset | Tradução | Licença | Origem |
 | --- | --- | --- | --- |
-| `biblia_blivre.json` | Bíblia Livre (BLIVRE) | Creative Commons Atribuição 4.0 Brasil (CC BY 4.0 BR) | Diego Santos, Mario Sérgio e Marco Teles — http://sites.google.com/site/biblialivre/ |
+| `biblia_blivre.json` | Bíblia Livre (BLIVRE) | Creative Commons Atribuição 3.0 Brasil (CC BY 3.0 BR) | Diego Santos, Mario Sérgio e Marco Teles — http://sites.google.com/site/biblialivre/ |
 | `biblia_bpm.json` | Bíblia Portuguesa Mundial (BPM) | Domínio público | eBible.org — https://ebible.org/ (porbrbsl) |
 | `biblia_jfaal.json` | João Ferreira de Almeida Atualizada Livre (JFAAL) | MIT | Projeto BibliaJFAAL — https://github.com/BibliaJFAAL |
 | `biblia_1911.json` | Almeida 1911 | Domínio público | Almeida e Silva (edições de 1911) |
@@ -24,7 +24,7 @@ Observações:
 
 - **BLIVRE** exige a menção da fonte e dos autores. Crédito: "Bíblia Livre
   (BLIVRE), Copyright © Diego Santos, Mario Sérgio e Marco Teles, fevereiro de
-  2018. Licença Creative Commons Atribuição 4.0 Brasil."
+  2018. Licença Creative Commons Atribuição 3.0 Brasil."
 - **BPM** é declarada de domínio público pela eBible.org e está em revisão
   (rascunho). Versículos ausentes nos manuscritos mais antigos aparecem
   numerados com a marca `[Versículo não incluído nesta tradução.]`, preservando
@@ -82,5 +82,5 @@ O app nativo Android legado foi alinhado ao mesmo conjunto de conteúdos livres
 ## Referências
 
 - Política de inclusão do F-Droid: https://f-droid.org/en/docs/Inclusion_Policy/
-- BLIVRE: http://sites.google.com/site/biblialivre/ (CC BY 4.0 BR)
+- BLIVRE: http://sites.google.com/site/biblialivre/ (CC BY 3.0 BR)
 - eBible.org (BPM, domínio público): https://ebible.org/
