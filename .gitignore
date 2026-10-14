@@ -42,3 +42,9 @@ proguard/
 
 # Gradle wrapper jar override (if present)
 !/gradle/wrapper/
+
+# Checkouts locais das duas edições (repositórios independentes)
+/edicoes/
+
+# Kotlin compiler session cache
+.kotlin/
