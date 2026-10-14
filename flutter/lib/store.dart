@@ -32,7 +32,7 @@ const String kAppName = 'Bíblia IPM';
 
 /// Versão de fallback (desenvolvimento/testes), sobrescrita no [AppState.load]
 /// pelo valor real do pacote via [PackageInfo].
-const String kAppVersion = '5.4.0';
+const String kAppVersion = '5.4.1';
 
 const int kDefaultDailyGoal = 4;
 const int kMaxRecent = 6;

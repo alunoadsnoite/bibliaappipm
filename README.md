@@ -1,3 +1,19 @@
+# Bíblia IPM — edição da igreja
+
+Esta branch mantém o app da igreja, versão **5.4.1+35**, baseada em 5.4.0, com identificador Android `br.com.valdenor.bibliaapp` e conteúdo original.
+
+- [Baixar APK atualizado da igreja](https://github.com/alunoadsnoite/bibliaappipm/releases/tag/v5.4.1).
+- [GitHub](https://github.com/alunoadsnoite/bibliaappipm/tree/igreja) · [GitLab](https://gitlab.com/alunoadsnoite/bibliaappipm/-/tree/igreja).
+- Para F-Droid, use o projeto independente [Bíblia Livre IPM](https://github.com/alunoadsnoite/biblia-livre-ipm), com outro identificador e sem documentos da Biblioteca. Os dois apps podem coexistir.
+
+A versão 5.4.1 remove contatos e chave Pix. O APK histórico 5.4.0 não é alterado por essa remoção.
+
+O código é MIT, mas textos e marcas mantêm direitos próprios. Esta edição não é candidata ao F-Droid. A licença do código não concede direitos de redistribuição sobre conteúdos de terceiros.
+
+Para executar: instale Flutter, entre em `flutter/`, execute `flutter pub get --enforce-lockfile` e `flutter run`. Para compilar uma atualização assinada, use a mesma chave privada da igreja, guardada fora do Git.
+
+---
+
 # Bíblia IPM
 
 Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Músicas**, **Biblioteca** e **Boletim da igreja** — desenvolvido em Flutter para Android e iOS.
@@ -81,7 +97,7 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Plano de leitura**: ativar/desativar e definir a meta diária.
 - **Leitura por voz**: escolher a **voz** (padrão/feminina/masculina), a
   **velocidade** e o **tom** da leitura.
-- **Sobre o app**: logomarca, versão e links (Instagram, YouTube e e-mail).
+- **Sobre o app**: logomarca e versão.
 - **Lembrete diário**: notificação local opcional em Android/iOS, com horário
   escolhido pelo usuário. A permissão é solicitada ao ativar; o sistema pode
   atrasar a entrega por economia de bateria. A ativação é específica do aparelho.
@@ -90,15 +106,12 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - **Backup**: compartilhar um arquivo JSON e importar pelo seletor de arquivos
   ou colando o conteúdo. Validação antes da restauração e cópia local dos dados
   anteriores; notas, destaques e progresso são mesclados.
-- Logomarca IPM, **Instagram** e **YouTube** da igreja.
-- **Dízimos e ofertas**: chave **Pix** da igreja para copiar/compartilhar, e
-  contatos por e-mail e WhatsApp.
+- Logomarca IPM.
+- Contatos e Pix foram removidos da versão atual.
 - Preferências e destaques preservados entre versões.
 
 ## Contato
 
-- **E-mail:** valdenorsa@proton.me
-- **WhatsApp:** +55 (81) 98835-3131
 
 ## Tecnologias
 
