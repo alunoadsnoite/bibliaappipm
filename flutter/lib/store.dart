@@ -20,13 +20,7 @@ const List<String> kVersionNames = [
   'Bíblia King James Fiel 1611',
 ];
 const List<String> kVersionAbbrs = ['ARA', 'NVI', 'NTLH', 'JFAA', 'BKJ'];
-const Map<String, String> kVersionAssets = {
-  'ara': 'assets/biblia_ara.json',
-  'nvi': 'assets/biblia_nvi.json',
-  'ntlh': 'assets/biblia_ntlh.json',
-  'jfaal': 'assets/biblia.json',
-  'bkj': 'assets/biblia_bkj.json',
-};
+
 
 const String kAppName = 'Bíblia IPM';
 
@@ -178,32 +172,21 @@ class AppState extends ChangeNotifier {
     });
     await _optional('versículo do dia', _saveDailyVerse);
 
-    await _optional('hinário', () async {
-      final hymnJson = jsonDecode(
-        await rootBundle.loadString('assets/hinos.json'),
-      ) as List<dynamic>;
-      hymns = hymnJson
-          .map((e) => Hymn.fromJson(e as Map<String, dynamic>))
-          .toList();
-    });
+    // Hinário: não inclusos no repositório por conta de direitos autorais.
+    // Adicionar apenas com licença comprovada (ver docs/COMPLIANCE_2026-10-14.md).
 
     await _optional('músicas', _loadSongs);
-    await _optional('boletim', _loadBoletim);
-    favorites = (prefs.getStringList('favorites') ?? []).toSet();
+    // Boletim: não inclusos no repositório por conta de direitos autorais.
+    // Adicionar apenas com licença comprovada (ver docs/COMPLIANCE_2026-10-14.md).    favorites = (prefs.getStringList('favorites') ?? []).toSet();
     _optionalSync('notas', _loadNotes);
     _optionalSync('recentes', _loadRecent);
     _optionalSync('plano de leitura', _loadPlan);
     await _optional('normalização de chaves', _migrateKeysToCanonical);
     await _optional('normalização de chaves de músicas', _migrateSongKeys);
 
-    await _optional('biblioteca', () async {
-      final libraryJson = jsonDecode(
-        await rootBundle.loadString('assets/biblioteca.json'),
-      ) as Map<String, dynamic>;
-      biblioteca = ((libraryJson['texts'] as List<dynamic>?) ?? [])
-          .map((e) => BibliotecaText.fromJson(e as Map<String, dynamic>))
-          .toList();
-    });
+    // Biblioteca: não inclusa no repositório por conta de direitos autorais.
+    // Adicionar apenas com licença comprovada (ver docs/COMPLIANCE_2026-10-14.md).
+    biblioteca = [];
 
     loaded = true;
     notifyListeners();
@@ -435,22 +418,8 @@ class AppState extends ChangeNotifier {
   /// Carrega o conjunto de versículos com falas de Deus/Jesus ("letras
   /// vermelhas"), indexado por livro/capítulo canônicos.
   Future<void> _loadRedLetter() async {
-    try {
-      final raw = jsonDecode(
-        await rootBundle.loadString('assets/redletter.json'),
-      ) as Map<String, dynamic>;
-      redLetter = raw.map(
-        (book, chapters) => MapEntry(
-          book,
-          (chapters as Map<String, dynamic>).map(
-            (ch, vs) => MapEntry(ch, (vs as List<dynamic>).cast<int>()),
-          ),
-        ),
-      );
-    } catch (_) {
-      redLetter = {};
-      rethrow;
-    }
+    // Índice de falas de Jesus/Deus: não disponível sem licença.
+    redLetter = {};
   }
 
   /// `true` se o versículo (índices canônicos) contém fala de Jesus/Deus.
@@ -539,32 +508,33 @@ class AppState extends ChangeNotifier {
   Future<void> _loadSongs() async {
     try {
       final stored = prefs.getString('songs_json');
-      final text = stored ?? await rootBundle.loadString('assets/musicas.json');
-      final arr = jsonDecode(text) as List<dynamic>;
-      songs = arr.map((e) => Song.fromJson(e as Map<String, dynamic>)).toList();
+      if (stored != null && stored.isNotEmpty) {
+        final arr = jsonDecode(stored) as List<dynamic>;
+        songs = arr.map((e) => Song.fromJson(e as Map<String, dynamic>)).toList();
+        return;
+      }
+      songs = [];
     } catch (_) {
       songs = [];
-      rethrow;
     }
   }
 
   Future<void> _loadBoletim() async {
     try {
       final stored = prefs.getString('boletim_json');
-      final text = stored ?? await rootBundle.loadString('assets/boletim.json');
-      final obj = jsonDecode(text) as Map<String, dynamic>;
-      final b = (obj['aniversariantes'] as List<dynamic>?) ?? [];
-      final e = (obj['eventos'] as List<dynamic>?) ?? [];
-      birthdays = b
-          .map((x) => Birthday.fromJson(x as Map<String, dynamic>))
-          .toList();
-      events = e
-          .map((x) => ChurchEvent.fromJson(x as Map<String, dynamic>))
-          .toList();
+      if (stored != null && stored.isNotEmpty) {
+        final obj = jsonDecode(stored) as Map<String, dynamic>;
+        final b = (obj['aniversariantes'] as List<dynamic>?) ?? [];
+        final e = (obj['eventos'] as List<dynamic>?) ?? [];
+        birthdays = b.map((x) => Birthday.fromJson(x as Map<String, dynamic>)).toList();
+        events = e.map((x) => ChurchEvent.fromJson(x as Map<String, dynamic>)).toList();
+        return;
+      }
+      birthdays = [];
+      events = [];
     } catch (_) {
       birthdays = [];
       events = [];
-      rethrow;
     }
   }
 

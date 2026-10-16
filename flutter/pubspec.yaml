@@ -32,14 +32,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/biblia.json
-    - assets/biblia_ara.json
-    - assets/biblia_nvi.json
-    - assets/biblia_ntlh.json
-    - assets/biblia_bkj.json
-    - assets/redletter.json
-    - assets/hinos.json
-    - assets/musicas.json
-    - assets/boletim.json
-    - assets/biblioteca.json
-    - assets/logo_ipm.png
+    # Nenhum asset de conteúdo está incluído para evitar violação de direitos autorais.
+    # Conteúdo deve ser adicionado apenas com licença comprovada (ver docs/COMPLIANCE_2026-10-14.md).

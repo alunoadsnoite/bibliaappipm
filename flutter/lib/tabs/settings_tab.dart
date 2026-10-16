@@ -321,7 +321,7 @@ class SettingsTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Image.asset(
-              'assets/logo_ipm.png',
+  // Logomarca IPM removida por direitos autorais
               width: 220,
               height: 140,
               fit: BoxFit.contain,
@@ -436,13 +436,14 @@ class SettingsTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Image.asset(
-                  'assets/logo_ipm.png',
-                  width: 160,
-                  height: 100,
-                  fit: BoxFit.contain,
+              // Logomarca IPM não disponível por conta de direitos autorais.
+    Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: t.card,
+                  borderRadius: BorderRadius.circular(16),
                 ),
+              ),
               ),
               const SizedBox(height: 8),
               Text(

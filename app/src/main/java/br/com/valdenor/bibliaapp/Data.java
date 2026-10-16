@@ -141,23 +141,50 @@ public class Data {
         if (loaded) return;
         bibles.clear();
         try {
-            List<Book> jfaal = loadBible(ctx, "biblia.json");
+            List<Book> jfaal = loadBible(ctx, "jfaal.json");
             bibles.put("jfaal", jfaal);
-            bibles.put("ara", loadBible(ctx, "biblia_ara.json"));
-            bibles.put("nvi", loadBible(ctx, "biblia_nvi.json"));
-            bibles.put("ntlh", loadBible(ctx, "biblia_ntlh.json"));
-            selectedVersion = ctx.getSharedPreferences(Ui.PREF_THEME, 0).getString(KEY_VERSION, "ara");
-            List<Book> cur = bibles.get(selectedVersion);
-            bible = cur != null ? cur : jfaal;
+        } catch (Exception e) {
+            bibles.put("jfaal", new ArrayList<>());
+        }
+        try {
+            bibles.put("ara", loadBible(ctx, "ara.json"));
+        } catch (Exception e) {
+            bibles.put("ara", new ArrayList<>());
+        }
+        try {
+            bibles.put("nvi", loadBible(ctx, "nvi.json"));
+        } catch (Exception e) {
+            bibles.put("nvi", new ArrayList<>());
+        }
+        try {
+            bibles.put("ntlh", loadBible(ctx, "ntlh.json"));
+        } catch (Exception e) {
+            bibles.put("ntlh", new ArrayList<>());
+        }
+        selectedVersion = ctx.getSharedPreferences(Ui.PREF_THEME, 0).getString(KEY_VERSION, "ara");
+        List<Book> cur = bibles.get(selectedVersion);
+        bible = cur != null ? cur : jfaal;
+
+        // Hinário: não disponível por direitos autorais.
+        try {
             JSONArray ha = new JSONArray(readAsset(ctx, "hinos.json"));
             for (int i = 0; i < ha.length(); i++) hymns.add(new Hymn(ha.getJSONObject(i)));
-            songs = loadSongs(ctx);
-            loadBoletim(ctx);
-            loaded = true;
         } catch (Exception e) {
-            bibles.clear();
-            bible = new ArrayList<>();
-            throw new RuntimeException("Falha ao carregar dados: " + e.getMessage(), e);
+            // Hinário não disponível por direitos autorais
+        }
+
+        // Músicas: não disponíveis por direitos autorais.
+        try {
+            songs = loadSongs(ctx);
+        } catch (Exception e) {
+            songs = new ArrayList<>();
+        }
+
+        // Boletim: não disponível por direitos autorais.
+        try {
+            loadBoletim(ctx);
+        } catch (Exception e) {
+            // Boletim não disponível
         }
     }
 

@@ -4,6 +4,15 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 
 > Nome do projeto: **BibliaApp** · versão atual: **5.4.0**
 
+## Status de licenciamento
+
+Este repositório segue a política de direitos autorais do F-Droid:
+
+- **Código**: MIT License (Copyright 2026 Valdenor).
+- **Conteúdo de texto**: **Nenhum**. Todos os assets com potencial de violação foram removidos para garantir conformidade com os requisitos do catálogo.
+
+Documentação detalhada em [`docs/COMPLIANCE_2026-10-14.md`](docs/COMPLIANCE_2026-10-14.md).
+
 ## Funcionalidades
 
 ### 📖 Bíblia
@@ -108,8 +117,8 @@ Aplicativo de leitura da **Bíblia Sagrada** fora do ar, com **Hinário**, **Mú
 - `file_selector` — importação de arquivos JSON
 - `flutter_tts` — leitura por voz (acessibilidade)
 - `flutter_local_notifications`, `flutter_timezone`, `timezone` — lembretes locais
-- `url_launcher` — contatos (e-mail e WhatsApp)
-- Código 100% offline — todos os conteúdos são empacotados como assets do app
+|- `url_launcher` — contatos (e-mail e WhatsApp)
+|- Código 100% offline — **sem conteúdo de texto** para garantir conformidade com direitos autorais (ver `docs/COMPLIANCE_2026-10-14.md`).
 
 ## Estrutura do projeto
 
@@ -123,7 +132,7 @@ BibliaApp/
 │   │   ├── theme.dart # Temas e níveis de fonte
 │   │   ├── common.dart # Destaques, copiar e compartilhar
 │   │   └── tabs/      # Abas: Bíblia, Hinário, Músicas, Biblioteca, Boletim, Config
-│   ├── assets/        # Bíblias (5 traduções), hinos, músicas, biblioteca e boletim
+│   ├── assets/        # (vazio — sem conteúdo de texto, por direitos autorais)
 │   ├── android/       # Projeto Android
 │   ├── ios/           # Projeto iOS
 │   └── test/          # Testes unitários e de widget
